@@ -8,7 +8,7 @@ package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common
  * LoginInfo class represents information about a login session.
  *
  * @author Harry / Symphony Dev Team<br>
- * Created on 23/10/2024
+ * Created on 30/12/2024
  * @since 1.0.0
  */
 public class LoginInfo {

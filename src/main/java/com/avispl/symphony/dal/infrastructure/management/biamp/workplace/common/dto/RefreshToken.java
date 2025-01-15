@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * This class is deserialized from a JSON response containing token details.
  *
  * @author Harry / Symphony Dev Team<br>
- * Created on 24/12/2024
+ * Created on 30/12/2024
  * @since 1.0.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)

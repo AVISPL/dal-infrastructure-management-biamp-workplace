@@ -8,71 +8,47 @@ package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common
  * Enum AggregatedInformation represents various pieces of aggregated information about a device.
  *
  * @author Harry / Symphony Dev Team<br>
- * Created on 23/10/2024
+ * Created on 07/1/2025
  * @since 1.0.0
  */
 public enum AggregatedInformation {
-	TYPE("Type", ""),
-	PRODUCT_NUMBER("ProductNumber", ""),
-	LABEL_NAME("LabelName", ""),
-	LABEL_DESCRIPTION("LabelDescription", ""),
-	CONNECTION_STATUS("ConnectionStatus", ""),
+	PRODUCT_FAMILY("ProductFamily", ""),
+	PRODUCT_MODEL("ProductModel", ""),
+	PRODUCT_REVISION("ProductRevision", ""),
+	SERIAL_NUMBER("SerialNumber", ""),
+	DESCRIPTION("Description", ""),
 
-	NETWORK_STATUS_SIGNAL_STRENGTH("SignalStrength(%)", "NetworkStatus#"),
-	NETWORK_STATUS_RSSI("RSSI(dBm)", "NetworkStatus#"),
-	NETWORK_STATUS_UPDATE_TIME("Update", "NetworkStatus#"),
-	NETWORK_STATUS_TRANSMISSION_MODE("TransmissionMode", "NetworkStatus#"),
+	ARCHITECTURE("Architecture", ""),
+	DEVICE_CREATED_AT("DeviceCreatedAt", ""),
+	DEVICE_UPDATED_AT("DeviceUpdatedAt", ""),
+	DEVICE_STATE("DeviceState", ""),
+	DEVICE_TYPE("DeviceType", ""),
+	DEVICE_LANGUAGE("DeviceLanguage", ""),
+	TIMEZONE("Timezone", ""),
+	LAST_TIMESTAMP("LastTimestamp", ""),
+	UPTIME("Uptime(Seconds)", ""),
 
-	BATTERY_STATUS_PERCENTAGE("Level(%)", "BatteryStatus#"),
-	BATTERY_STATUS_UPDATE_TIME("Update", "BatteryStatus#"),
+	/** Firmware **/
+	CURRENT_VERSION("CurrentVersion", "Firmware#"),
+	CHANNEL("Channel", "Firmware#"),
+	LATEST_VERSION("LatestVersion", "Firmware#"),
+	NEXT_VERSION("NextVersion", "Firmware#"),
 
-	/** CO2 **/
-	CO2_PPM("CO2(ppm)", "SensorData#"),
-	CO2_UPDATE_TIME("C02Update", "SensorData#"),
+	/** Statistics **/
+	CPU_UTILIZATION("CpuUtilization(%)", "Statistics#"),
+	PRESENCE_DETECTED("PresenceDetected", "Statistics#"),
+	TEMPERATURE("Temperature", "Statistics#"),
 
-	PRESSURE_PASCAL("Pressure(hPa)", "SensorData#"),
-	PRESSURE_UPDATE_TIME("PressureUpdate", "SensorData#"),
+	/** Workplace **/
+	ORGANIZATION_ID("OrganizationId", "Workplace_Information#"),
+	ORGANIZATION_NAME("OrganizationName", "Workplace_Information#"),
+	DESK_ID("WorkplaceDeskID", "Workplace_Information#"),
+	DESK_NAME("WorkplaceDeskName", "Workplace_Information#"),
+	PLACE_NAME("WorkplacePlaceName", "Workplace_Information#"),
+	PLACE_ID("WorkplacePlaceID", "Workplace_Information#"),
+	ROOM_ID("WorkplaceRoomID", "Workplace_Information#"),
+	ROOM_NAME("WorkplaceRoomName", "Workplace_Information#"),
 
-	/** DeskOccupancy **/
-	DESK_OCCUPANCY_STATE("DeskOccupancyState", "SensorData#"),
-	DESK_OCCUPANCY_UPDATE_TIME("DeskOccupancyUpdate", "SensorData#"),
-	DESK_OCCUPANCY_REMARKS("DeskOccupancyRemarks", "SensorData#"),
-
-	/** Door&Window **/
-	CONTACT_STATE("ContactState", "SensorData#"),
-	CONTACT_UPDATE_TIME("ContactUpdate", "SensorData#"),
-
-	/** Humidity **/
-	HUMIDITY_TEMP("HumidityTemperature(C)", "SensorData#"),
-	HUMIDITY_RELATIVE("Humidity(%)", "SensorData#"),
-	HUMIDITY_UPDATE_TIME("HumidityUpdate", "SensorData#"),
-
-	/** Motion **/
-	MOTION_STATE("MotionState", "SensorData#"),
-	MOTION_UPDATE_TIME("MotionUpdate", "SensorData#"),
-
-	/** Proximity Counter **/
-	OBJECT_PRESENT_COUNT_TOTAL("ObjectPresentCount", "SensorData#"),
-	OBJECT_PRESENT_COUNT_UPDATE_TIME("ObjectPresentCountUpdate", "SensorData#"),
-
-	/** Proximity **/
-	OBJECT_PRESENT_STATE("ObjectPresentState", "SensorData#"),
-	OBJECT_PRESENT_UPDATE_TIME("ObjectPresentUpdate", "SensorData#"),
-
-	/** Temperature **/
-	TEMPERATURE_VALUE("Temperature(C)", "SensorData#"),
-	TEMPERATURE_UPDATE_TIME("TemperatureUpdate", "SensorData#"),
-
-	/** Touch Counter **/
-	TOUCH_COUNT_TOTAL("TouchCount", "SensorData#"),
-	TOUCH_COUNT_UPDATE_TIME("TouchCountUpdate", "SensorData#"),
-
-	/** Touch **/
-	SENSOR_DATA("TouchUpdate", "SensorData#"),
-
-	/** WaterDetector **/
-	WATER_PRESENT_STATE("WaterDetectionState", "SensorData#"),
-	WATER_PRESENT_UPDATE_TIME("WaterDetectionUpdate", "SensorData#"),
 	;
 
 	private final String name;

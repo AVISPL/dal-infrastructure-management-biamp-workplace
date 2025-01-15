@@ -8,20 +8,15 @@ package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common
  * AggregatorInformation class represents information about the aggregator.
  *
  * @author Harry / Symphony Dev Team<br>
- * Created on 22/10/2024
+ * Created on 10/1/2025
  * @since 1.0.0
  */
 public enum AggregatorInformation {
-	PROJECT_ID("name", ""),
-	DISPLAY_NAME("displayName", ""),
-	ORGANIZATION("organization", ""),
-	ORGANIZATION_DISPLAY_NAME("organizationDisplayName", ""),
-	SENSOR_COUNT("sensorCount", ""),
-	CLOUD_CONNECTOR_COUNT("cloudConnectorCount", ""),
-	INVENTORY("inventory", ""),
-	LOCATION_TIME("timeLocation", "LocationTime"),
-	LOCATION_LATITUDE("latitude", "LocationLatitude"),
-	LOCATION_LONGITUDE("longitude", "LocationLongitude"),
+	USER_ROLE("userRole", ""),
+	USER_STATUS("userStatus", ""),
+	ORGANIZATION_ID("organizationId", ""),
+	ORGANIZATION_NAME("organizationName", ""),
+	DEVICE_COUNT("deviceCount", ""),
 	;
 	private final String name;
 	private final String group;

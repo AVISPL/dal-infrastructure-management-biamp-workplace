@@ -15,13 +15,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
+import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
 
 /**
  * BiampWorkplaceCommunicatorTest
  *
  * @author Harry / Symphony Dev Team<br>
- * Created on 25/10/2024
+ * Created on 02/01/2025
  * @since 1.0.0
  */
 public class BiampWorkplaceCommunicatorTest {
@@ -31,10 +32,9 @@ public class BiampWorkplaceCommunicatorTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		disruptiveTechnologiesCommunicator = new BiampWorkplaceCommunicator();
-//		disruptiveTechnologiesCommunicator.setHost("api.evoko.app/graphql");
-		disruptiveTechnologiesCommunicator.setHost("127.0.0.1");
-		disruptiveTechnologiesCommunicator.setLogin("283590591013552185@platform");
-		disruptiveTechnologiesCommunicator.setPassword("jFZucJSyFv79C2vmaYKT63NI3K-A87rR6hWqKYtcqam5G6DidM8fjUGcbpMBMI6zT0OojLMJquPO-7HQF_Qy8nJyqpBcHt65sJKFwIQ7");
+		disruptiveTechnologiesCommunicator.setHost("");
+		disruptiveTechnologiesCommunicator.setLogin("");
+		disruptiveTechnologiesCommunicator.setPassword("");
 		disruptiveTechnologiesCommunicator.setPort(8088);
 		disruptiveTechnologiesCommunicator.init();
 		disruptiveTechnologiesCommunicator.connect();
@@ -54,12 +54,29 @@ public class BiampWorkplaceCommunicatorTest {
 	}
 
 	@Test
+	void testGetMetadata() throws Exception {
+		disruptiveTechnologiesCommunicator.getMultipleStatistics();
+		Thread.sleep(30000);
+		List<Statistics> statistics = disruptiveTechnologiesCommunicator.getMultipleStatistics();
+		ExtendedStatistics stats = (ExtendedStatistics) statistics.get(0);
+		Map<String, String> dsMap = stats.getDynamicStatistics();
+		Map<String, String> esMap = stats.getStatistics();
+		Assertions.assertNotNull(statistics);
+		Assertions.assertNotNull(stats);
+		Assertions.assertNotNull(esMap.get("AdapterBuildDate"));
+		Assertions.assertNotNull(esMap.get("AdapterUptime"));
+		Assertions.assertNotNull(esMap.get("AdapterUptime(min)"));
+		Assertions.assertNotNull(esMap.get("AdapterVersion"));
+		Assertions.assertNotNull(dsMap.get("LastMonitoringCycleDuration(s)"));
+	}
+
+	@Test
 	void testGetAggregatorData() throws Exception {
 		extendedStatistic = (ExtendedStatistics) disruptiveTechnologiesCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistic.getStatistics();
-		Assertions.assertEquals("AVI-SPL-LAB Inventory", stats.get("Generic#ProjectName"));
-		Assertions.assertEquals("AVI-SPL-LAB", stats.get("Generic#OrganizationName"));
-		Assertions.assertEquals("12", stats.get("Generic#MonitoredSensorCount"));
+		Assertions.assertEquals("Tech Solutions Ltd.", stats.get("OrganizationName"));
+		Assertions.assertEquals("ORG_ADMIN", stats.get("UserRole"));
+		Assertions.assertEquals("1", stats.get("DeviceCount"));
 	}
 
 	@Test
@@ -68,18 +85,16 @@ public class BiampWorkplaceCommunicatorTest {
 		disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(20000);
 		List<AggregatedDevice> aggregatedDeviceList = disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
-		System.out.println("aggregatedDeviceList " + aggregatedDeviceList);
-		String sensorId = "emucrbc5qpqbmpf547g7dh0";
-		Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.stream().filter(item -> item.getDeviceId().equals(sensorId)).findFirst();
+		Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.stream().findFirst();
 		if (aggregatedDevice.isPresent()) {
 			Map<String, String> stats = aggregatedDevice.get().getProperties();
-			Assertions.assertEquals("CO2", stats.get("Type"));
-			Assertions.assertEquals("CO2 Sensor 1", stats.get("LabelName"));
+			Assertions.assertEquals("Desk Controller", stats.get("DeviceType"));
+			Assertions.assertEquals("ARM64", stats.get("Architecture"));
 		}
 	}
 
 	@Test
-	void testGetMultipleStatisticsWithHistoricalProperties()throws Exception {
+	void testGetMultipleStatisticsWithHistoricalProperties() throws Exception {
 		disruptiveTechnologiesCommunicator.setHistoricalProperties("SensorData#ObjectPresentCount, CO2(ppm), Temperature(C)");
 		disruptiveTechnologiesCommunicator.getMultipleStatistics();
 		disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
