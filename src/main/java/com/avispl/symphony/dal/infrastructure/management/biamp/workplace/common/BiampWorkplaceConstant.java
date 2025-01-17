@@ -5,7 +5,7 @@
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common;
 
 /**
- * DisruptiveTechnologiesConstant class used in monitoring
+ * BiampWorkplaceConstant class used in monitoring
  *
  * @author Harry / Symphony Dev Team<br>
  * Created on 30/12/2024

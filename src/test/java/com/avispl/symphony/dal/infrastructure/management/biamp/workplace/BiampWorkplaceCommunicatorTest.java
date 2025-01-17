@@ -27,37 +27,37 @@ import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
  */
 public class BiampWorkplaceCommunicatorTest {
 	private ExtendedStatistics extendedStatistic;
-	private BiampWorkplaceCommunicator disruptiveTechnologiesCommunicator;
+	private BiampWorkplaceCommunicator biampWorkplaceCommunicator;
 
 	@BeforeEach
 	void setUp() throws Exception {
-		disruptiveTechnologiesCommunicator = new BiampWorkplaceCommunicator();
-		disruptiveTechnologiesCommunicator.setHost("");
-		disruptiveTechnologiesCommunicator.setLogin("");
-		disruptiveTechnologiesCommunicator.setPassword("");
-		disruptiveTechnologiesCommunicator.setPort(8088);
-		disruptiveTechnologiesCommunicator.init();
-		disruptiveTechnologiesCommunicator.connect();
+		biampWorkplaceCommunicator = new BiampWorkplaceCommunicator();
+		biampWorkplaceCommunicator.setHost("");
+		biampWorkplaceCommunicator.setLogin("");
+		biampWorkplaceCommunicator.setPassword("");
+		biampWorkplaceCommunicator.setPort(8088);
+		biampWorkplaceCommunicator.init();
+		biampWorkplaceCommunicator.connect();
 	}
 
 	@AfterEach
 	void destroy() throws Exception {
-		disruptiveTechnologiesCommunicator.disconnect();
-		disruptiveTechnologiesCommunicator.destroy();
+		biampWorkplaceCommunicator.disconnect();
+		biampWorkplaceCommunicator.destroy();
 	}
 
 	@Test
 	void testLoginSuccess() throws Exception {
-		disruptiveTechnologiesCommunicator.getMultipleStatistics();
+		biampWorkplaceCommunicator.getMultipleStatistics();
 		Thread.sleep(10000);
-		disruptiveTechnologiesCommunicator.getMultipleStatistics();
+		biampWorkplaceCommunicator.getMultipleStatistics();
 	}
 
 	@Test
 	void testGetMetadata() throws Exception {
-		disruptiveTechnologiesCommunicator.getMultipleStatistics();
+		biampWorkplaceCommunicator.getMultipleStatistics();
 		Thread.sleep(30000);
-		List<Statistics> statistics = disruptiveTechnologiesCommunicator.getMultipleStatistics();
+		List<Statistics> statistics = biampWorkplaceCommunicator.getMultipleStatistics();
 		ExtendedStatistics stats = (ExtendedStatistics) statistics.get(0);
 		Map<String, String> dsMap = stats.getDynamicStatistics();
 		Map<String, String> esMap = stats.getStatistics();
@@ -72,7 +72,7 @@ public class BiampWorkplaceCommunicatorTest {
 
 	@Test
 	void testGetAggregatorData() throws Exception {
-		extendedStatistic = (ExtendedStatistics) disruptiveTechnologiesCommunicator.getMultipleStatistics().get(0);
+		extendedStatistic = (ExtendedStatistics) biampWorkplaceCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistic.getStatistics();
 		Assertions.assertEquals("Tech Solutions Ltd.", stats.get("OrganizationName"));
 		Assertions.assertEquals("ORG_ADMIN", stats.get("UserRole"));
@@ -81,10 +81,10 @@ public class BiampWorkplaceCommunicatorTest {
 
 	@Test
 	void testGetAggregatedData() throws Exception {
-		disruptiveTechnologiesCommunicator.getMultipleStatistics();
-		disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
+		biampWorkplaceCommunicator.getMultipleStatistics();
+		biampWorkplaceCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(20000);
-		List<AggregatedDevice> aggregatedDeviceList = disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
+		List<AggregatedDevice> aggregatedDeviceList = biampWorkplaceCommunicator.retrieveMultipleStatistics();
 		Optional<AggregatedDevice> aggregatedDevice = aggregatedDeviceList.stream().findFirst();
 		if (aggregatedDevice.isPresent()) {
 			Map<String, String> stats = aggregatedDevice.get().getProperties();
@@ -95,21 +95,21 @@ public class BiampWorkplaceCommunicatorTest {
 
 	@Test
 	void testGetMultipleStatisticsWithHistoricalProperties() throws Exception {
-		disruptiveTechnologiesCommunicator.setHistoricalProperties("SensorData#ObjectPresentCount, CO2(ppm), Temperature(C)");
-		disruptiveTechnologiesCommunicator.getMultipleStatistics();
-		disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
+		biampWorkplaceCommunicator.setHistoricalProperties("SensorData#ObjectPresentCount, CO2(ppm), Temperature(C)");
+		biampWorkplaceCommunicator.getMultipleStatistics();
+		biampWorkplaceCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(20000);
-		List<AggregatedDevice> aggregatedDeviceList = disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
+		List<AggregatedDevice> aggregatedDeviceList = biampWorkplaceCommunicator.retrieveMultipleStatistics();
 		System.out.println("aggregatedDeviceList: " + aggregatedDeviceList);
 		Assert.assertEquals(12, aggregatedDeviceList.size());
 	}
 
 	@Test
 	void testGetNumberOfDevices() throws Exception {
-		disruptiveTechnologiesCommunicator.getMultipleStatistics();
-		disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
+		biampWorkplaceCommunicator.getMultipleStatistics();
+		biampWorkplaceCommunicator.retrieveMultipleStatistics();
 		Thread.sleep(20000);
-		List<AggregatedDevice> aggregatedDeviceList = disruptiveTechnologiesCommunicator.retrieveMultipleStatistics();
+		List<AggregatedDevice> aggregatedDeviceList = biampWorkplaceCommunicator.retrieveMultipleStatistics();
 		Assert.assertEquals(11, aggregatedDeviceList.size());
 	}
 
