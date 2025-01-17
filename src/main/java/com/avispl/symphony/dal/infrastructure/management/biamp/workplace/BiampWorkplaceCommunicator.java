@@ -1,5 +1,5 @@
 	/*
-	 *  Copyright (c) 2024 AVI-SPL, Inc. All Rights Reserved.
+	 *  Copyright (c) 2025 AVI-SPL, Inc. All Rights Reserved.
 	 */
 
 	package com.avispl.symphony.dal.infrastructure.management.biamp.workplace;
@@ -70,6 +70,55 @@
 	 *    <li> Organization Id </li>
 	 *    <li> Organization Name </li>
 	 *  <ul>
+	 *
+	 * Monitoring aggregated device:
+	 * <ul>
+	 *     <li>ProductFamily</li>
+	 *     <li>ProductModel</li>
+	 *     <li>ProductRevision</li>
+	 *     <li>SerialNumber</li>
+	 *     <li>Description</li>
+	 *
+	 *     <li>Architecture</li>
+	 *     <li>DeviceCreatedAt</li>
+	 *     <li>DeviceUpdatedAt</li>
+	 *     <li>DeviceState</li>
+	 *     <li>DeviceType</li>
+	 *     <li>DeviceLanguage</li>
+	 *     <li>Timezone</li>
+	 *     <li>LastTimestamp</li>
+	 *     <li>Uptime(Seconds)</li>
+	 *
+	 *     <li>Firmware
+	 *         <ul>
+	 *             <li>CurrentVersion</li>
+	 *             <li>Channel</li>
+	 *             <li>LatestVersion</li>
+	 *             <li>NextVersion</li>
+	 *         </ul>
+	 *     </li>
+	 *
+	 *     <li>Statistics
+	 *         <ul>
+	 *             <li>CpuUtilization(%)</li>
+	 *             <li>PresenceDetected</li>
+	 *             <li>Temperature</li>
+	 *         </ul>
+	 *     </li>
+	 *
+	 *     <li>Workplace_Information
+	 *         <ul>
+	 *             <li>OrganizationId</li>
+	 *             <li>OrganizationName</li>
+	 *             <li>WorkplaceDeskID</li>
+	 *             <li>WorkplaceDeskName</li>
+	 *             <li>WorkplacePlaceName</li>
+	 *             <li>WorkplacePlaceID</li>
+	 *             <li>WorkplaceRoomID</li>
+	 *             <li>WorkplaceRoomName</li>
+	 *         </ul>
+	 *     </li>
+	 * </ul>
 	 *
 	 * @author Harry / Symphony Dev Team<br>
 	 * Created on 02/1/2025
@@ -537,13 +586,7 @@
 		/**
 		 * Retrieves aggregator information by sending a POST request and processing the response.
 		 *
-		 * <p>This method sends a request using the `SIMULATOR_GET_AGGREGATOR` command and `PROFILE_QUERY`,
-		 * then parses the response to extract the aggregator data. If the data is not present,
-		 * a {@link ResourceNotReachableException} is thrown. In the event of an exception,
-		 * it attempts to retrieve a new token using the refresh token.</p>
-		 *
 		 * @throws FailedLoginException if the login fails during token retrieval.
-		 * @throws ResourceNotReachableException if the system information cannot be retrieved.
 		 */
 		private void retrieveAggregatorInfo() throws FailedLoginException {
 			try{
@@ -553,7 +596,7 @@
 				}
 				aggregatorResponse = response.get(BiampWorkplaceConstant.DATA);
 			} catch (Exception e){
-				 retrieveToken(refresh_Token);
+				throw new FailedLoginException("Token has been expired. Please renew the token");
 			}
 		}
 
@@ -624,6 +667,7 @@
 		/**
 		 * Populates detailed information for each device in the aggregated response.
 		 * This method iterates over all devices in the response
+		 * @throws FailedLoginException if the login fails during token retrieval.
 		 */
 		private void populateDeviceAggregated() throws FailedLoginException {
 			reentrantLock.lock();
@@ -638,7 +682,7 @@
 				cachedData.removeIf(item -> item.getDeviceId().equals(id));
 				cachedData.addAll(aggregatedDeviceProcessor.extractDevices(node));
 			} catch (Exception e){
-				retrieveToken(refresh_Token);
+				throw new FailedLoginException("Token has been expired. Please renew the token");
 			} finally {
 				reentrantLock.unlock();
 			}
@@ -647,15 +691,15 @@
 		/**
 		 * Check API token validation
 		 * If the token expires, we send a request to get a new token
+		 * @throws Exception if there is an error during the retrieval process
 		 */
 		private void checkValidApiToken() throws Exception {
-			// if (StringUtils.isNullOrEmpty(this.getLogin()) || StringUtils.isNullOrEmpty(this.getPassword())) {
-			// throw new FailedLoginException("Client_Id or Refresh token field is empty. Please check device credentials");
-			// }
+			 if (StringUtils.isNullOrEmpty(this.getLogin()) || StringUtils.isNullOrEmpty(this.getPassword())) {
+			 throw new FailedLoginException("Client_Id or Refresh token field is empty. Please check device credentials");
+			 }
 			if (this.loginInfo.isTimeout() || StringUtils.isNullOrEmpty(this.loginInfo.getToken())) {
 				logger.info("Token expired or missing. Retrieving new token...");
-				String mockupPassword = BiampWorkplaceConstant.MOCKUP_PASSWORD ;
-				String[] passwordField = mockupPassword.split(BiampWorkplaceConstant.SPACE);
+				String[] passwordField = this.getPassword().split(BiampWorkplaceConstant.SPACE);
 				if (passwordField.length == 2) {
 					this.accessToken = passwordField[0];
 					refresh_Token = passwordField[1];
@@ -668,16 +712,10 @@
 		/**
 		 * Retrieves a new access token using the provided or available refresh token.
 		 *
-		 * <p>This method attempts to use the refresh token to request a new access token
-		 * from the authentication server. If the provided refresh token is null or invalid,
-		 * an exception is thrown, indicating the need to log in again. Upon success, the
-		 * new access token and refresh token are updated in the system.</p>
-		 *
 		 * @param refresh_Token The refresh token to be used for obtaining a new access token.
 		 *                      If null, the method attempts to use an existing refresh token
 		 *                      from the {@code objToken} object.
 		 * @throws FailedLoginException if the token retrieval fails due to invalid credentials or other errors.
-		 * @throws RuntimeException if no valid refresh token is available.
 		 */
 		private void retrieveToken(String refresh_Token) throws FailedLoginException {
 				try{
@@ -692,13 +730,10 @@
 					requestBody.put(BiampWorkplaceConstant.REFRESH_TOKEN, Collections.singletonList(refreshToken));
 					JsonNode result = doPost(BiampWorkplaceCommand.SIMULATOR_GET_TOKEN, requestBody, JsonNode.class);
 
-					ObjectMapper objectMapper = new ObjectMapper();
 					objToken = objectMapper.treeToValue(result.get("response"), RefreshToken.class);
 					this.loginInfo.setToken(objToken.getAccessToken());
 					this.accessToken = objToken.getAccessToken();
 					this.loginInfo.setLoginDateTime(System.currentTimeMillis());
-					logger.info("New access token retrieved successfully: " + objToken.getAccessToken());
-					logger.info("New refresh token saved: " + objToken.getRefreshToken());
 
 				} catch (Exception e) {
 					throw new FailedLoginException("Invalid token");
@@ -758,8 +793,7 @@
 		 * @return string after fix
 		 */
 		private String uppercaseFirstCharacter(String input) {
-			char firstChar = input.charAt(0);
-			return Character.toUpperCase(firstChar) + input.substring(1);
+			return Character.toUpperCase(input.charAt(0)) + input.substring(1);
 		}
 
 		/**

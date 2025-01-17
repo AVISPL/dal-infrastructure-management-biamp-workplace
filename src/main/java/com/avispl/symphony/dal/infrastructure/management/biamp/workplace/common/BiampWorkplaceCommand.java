@@ -1,11 +1,13 @@
 /*
- *  Copyright (c) 2024 AVI-SPL, Inc. All Rights Reserved.
+ *  Copyright (c) 2025 AVI-SPL, Inc. All Rights Reserved.
  */
 
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common;
 
 /**
- * DisruptiveTechnologiesCommand
+ * BiampWorkplaceCommand
+ * Defines a collection of constants representing various commands and URLs
+ * used for interacting with the Biamp Workplace API.
  *
  * @author Harry / Symphony Dev Team<br>
  * Created on 30/12/2024

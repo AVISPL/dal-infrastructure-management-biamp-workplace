@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024 AVI-SPL, Inc. All Rights Reserved.
+ *  Copyright (c) 2025 AVI-SPL, Inc. All Rights Reserved.
  */
 
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common;
@@ -32,8 +32,6 @@ public class BiampWorkplaceConstant {
 	public static final String STATUS = "status";
 	public static final String ROLE = "role";
 	public static final String TOTAL_COUNT = "totalCount";
-	public static final String MOCKUP_PASSWORD = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjMwMTc4MTg5MDY4NjI4NzkxNCIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiMjY5Mzk5NTA1Njg0NzU4NTQyQHBsYXRmb3JtIiwiMjY5Mzk5NzY2MTUxMDM2OTQyQHBsYXRmb3JtIiwiMjgzNTkwNTkxMDEzNTUyMTg1QHBsYXRmb3JtIiwiMjg2MzY0NTk3Mzk1NDg4ODIxQHBsYXRmb3JtIiwiMjY5Mzk5NzY2NDY5ODA0MDQ2QHBsYXRmb3JtIiwiMjY5Mzk5NzY1OTQ5NzEwMzUwQHBsYXRmb3JtIiwiMjk0MzEwNzAyMDc4ODUzMTc1IiwiMjk0NDA3NjI5NzQzMTYxMzk5IiwiMjY5Mzk5MTYxODE4ODczODcwIl0sImV4cCI6MTczNjQzNTAwOSwiaWF0IjoxNzM2MzkxODA5LCJpc3MiOiJodHRwczovL2lhbS53b3JrcGxhY2UuYmlhbXAuYXBwIiwianRpIjoiVjJfMzAxODE0MjI5OTQ0NTMzMDY4LWF0XzMwMTgxNTA4NTM0NzY2ODA0NCIsIm5iZiI6MTczNjM5MTgwOSwic3ViIjoiMjk4NjE4OTcyMjQ3NDU3ODg1IiwidXJuOnppdGFkZWw6aWFtOnVzZXI6bWV0YWRhdGEiOnsiZXdwX3VzZXJfaWQiOiJNV0k1TWpVek1qUXROamRsT1MwME5UUmhMVGhrWXpZdE9UbG1PVGRsTlRRMk9HSm0iLCJld3BfdXNlcl90eXBlIjoiZFhObGNnIn19.mtyfwJhKztjcTZrA64jv-IO3P0nk34u2X6CutjSQ5Tw_uFFYrHriNqHLxAe43TP2AV1Fk51ZTs19mRWIKmsgXfwpyC71wH0gnj7Yo99qvG6bWZVrHbv-0ferf5elQDv5gSl0TdiT1KSIgMq97dPyDcRdyhqPlOVZ0YwrSn5dGoGP-KjSSlbOhi7L-CF31ZBA8vR314taEPnjvj2vBBVa3tE_BE00yK-GmSuL-lDJUagEhy9cZlNWpCfFcZyMQkO5GUl4dgDgjitG7yNZQ0PDZupSzWlh1BSHDLsaEDjEgccSV934EMvyIQDpHZswYkQvaA1PpTgJ8x650lUM7fptAg OFIo6nzYs-kmtJJPSfH_D4MSY2ONKw8NQiqA9UaR-EhRYdb1Yfn83SjpylUrUUGCbvnE_zSZGgK6dg0zld-19WWx06JabSDMV0DglhwI";
-
 	public static final String MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(s)";
 	public static final String ADAPTER_VERSION = "AdapterVersion";
 	public static final String ADAPTER_BUILD_DATE = "AdapterBuildDate";
