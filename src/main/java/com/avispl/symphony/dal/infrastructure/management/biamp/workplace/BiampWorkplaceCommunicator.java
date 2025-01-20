@@ -217,7 +217,7 @@
 		 * Represents the refresh token used for obtaining a new access token
 		 * when the current access token expires.
 		 */
-		private String refresh_Token;
+		private String refreshToken;
 
 		/**
 		 * Private variable representing the local extended statistics.
@@ -702,32 +702,30 @@
 				String[] passwordField = this.getPassword().split(BiampWorkplaceConstant.SPACE);
 				if (passwordField.length == 2) {
 					this.accessToken = passwordField[0];
-					refresh_Token = passwordField[1];
+					refreshToken = passwordField[1];
 				} else {
 					throw new FailedLoginException("The format of Password field is incorrect. Please check again");
 				}
+				retrieveToken();
 			}
 		}
 
 		/**
 		 * Retrieves a new access token using the provided or available refresh token.
 		 *
-		 * @param refresh_Token The refresh token to be used for obtaining a new access token.
-		 *                      If null, the method attempts to use an existing refresh token
-		 *                      from the {@code objToken} object.
 		 * @throws FailedLoginException if the token retrieval fails due to invalid credentials or other errors.
 		 */
-		private void retrieveToken(String refresh_Token) throws FailedLoginException {
+		private void retrieveToken() throws FailedLoginException {
 				try{
-					String refreshToken = Optional.ofNullable(objToken.getRefreshToken()).orElse(refresh_Token);
+					String token = Optional.ofNullable(objToken.getRefreshToken()).orElse(refreshToken);
 
-					if (StringUtils.isNullOrEmpty(refreshToken)) {
+					if (StringUtils.isNullOrEmpty(token)) {
 						throw new RuntimeException("No valid refresh token available. Login might be required.");
 					}
 					MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
 					requestBody.put(BiampWorkplaceConstant.GRANT_TYPE, Collections.singletonList(BiampWorkplaceConstant.REFRESH_TOKEN));
 					requestBody.put(BiampWorkplaceConstant.CLIENT_ID, Collections.singletonList(this.getLogin()));
-					requestBody.put(BiampWorkplaceConstant.REFRESH_TOKEN, Collections.singletonList(refreshToken));
+					requestBody.put(BiampWorkplaceConstant.REFRESH_TOKEN, Collections.singletonList(token));
 					JsonNode result = doPost(BiampWorkplaceCommand.SIMULATOR_GET_TOKEN, requestBody, JsonNode.class);
 
 					objToken = objectMapper.treeToValue(result.get("response"), RefreshToken.class);
