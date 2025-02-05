@@ -1,0 +1,42 @@
+models:
+  - model:
+      name: Generic
+      vendor: BiampWorkplace
+      filter: true
+      mapping:
+        deviceOnline: at("/state").asText().equalsIgnoreCase("active")
+        deviceId: at("/id").asText()
+        deviceModel: at("/type/name")
+      properties:
+        ProductFamily: at("/attributes/productFamily")
+        ProductModel: at("/attributes/productModel")
+        ProductRevision: at("/attributes/productRevision")
+        SerialNumber: at("/attributes/serial")
+        Description: at("/attributes/description")
+        Architecture: at("/attributes/architecture")
+        DeviceCreatedAt: at("/createdAt")
+        DeviceUpdatedAt: at("/updatedAt")
+        DeviceState: at("/state")
+        DeviceType: at("/type/name")
+        DeviceLanguage: at("/language")
+        Timezone: at("/timezone")
+        LastTimestamp: at("/status/timestamp")
+        Uptime(Seconds): at("/status/uptime")
+        Firmware#CurrentVersion: at("/status/firmware")
+        Firmware#Channel: at("/channel/name")
+        Firmware#LatestVersion: at("/latestFirmware/version")
+        Firmware#NextVersion: at("/nextFirmware/version")
+
+        Statistics#CpuUtilization(%): at("/status/cpuUtilization")
+        Statistics#PresenceDetected: at("/status/presence")
+        Statistics#Temperature: at("/status/temperature")
+
+        Workplace_Information#OrganizationId: at("/orgId")
+        Workplace_Information#OrganizationName: at("/orgName")
+        Workplace_Information#WorkplaceDeskID: at("/deskId")
+        Workplace_Information#WorkplaceDeskName: at("/desk/name")
+        Workplace_Information#WorkplacePlaceName: at("/place/name")
+        Workplace_Information#WorkplacePlaceID: at("/placeId")
+        Workplace_Information#WorkplaceRoomID: at("/desk/name")
+        Workplace_Information#WorkplaceRoomName: at("/roomId")
+
