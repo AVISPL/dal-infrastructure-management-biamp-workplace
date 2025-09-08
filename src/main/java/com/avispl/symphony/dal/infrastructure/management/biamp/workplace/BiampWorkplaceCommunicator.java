@@ -155,6 +155,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			this.setupData();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			Map<String, String> statistics = new HashMap<>();
+			statistics.putAll(this.getGeneralProperties());
 			statistics.putAll(this.getOrganizationProperties());
 
 			extendedStatistics.setStatistics(statistics);
@@ -252,6 +253,20 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		}
 
 		this.requestStateHandler.verifyRequestState();
+	}
+
+	/**
+	 * Retrieves general properties related to the adapter's version and status.
+	 * <p>Uses {@link MonitoringUtil#mapToGeneralProperty(Properties, GeneralProperty)} to map each property.</p>
+	 *
+	 * @return a map of general property names and their corresponding values
+	 */
+	private Map<String, String> getGeneralProperties() {
+		return MonitoringUtil.generateProperties(
+				GeneralProperty.values(),
+				null,
+				property -> MonitoringUtil.mapToGeneralProperty(this.versionProperties, property)
+		);
 	}
 
 	/**

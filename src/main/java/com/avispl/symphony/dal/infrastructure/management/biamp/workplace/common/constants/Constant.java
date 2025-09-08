@@ -38,6 +38,8 @@ public class Constant {
 	//	Warning messages
 	public static final String SENT_REQUEST_NULL_WARNING = "Sent request is null. Endpoint: %s, ResponseClass: %s";
 	public static final String ORGANIZATIONS_EMPTY_WARNING = "The organizations is empty, returning empty map.";
+	public static final String OBJECT_NULL_WARNING = "%s object is null, returning null value.";
+	public static final String UNSUPPORTED_PROPERTY_WARNING = "Unsupported %s with property %s.";
 
 	//	Fail messages
 	public static final String REQUEST_APIS_FAILED = "Unable to process requested API sections: [%s], error reported: [%s]";
@@ -46,4 +48,6 @@ public class Constant {
 	public static final String FETCH_DATA_FAILED = "Exception while fetching data. Endpoint: %s, ResponseClass: %s";
 	public static final String FIND_GRAPHQL_FOLDER_FAILED = "Can not find the GraphQL folder: ";
 	public static final String READ_GRAPHQL_QUERY_FAILED = "Can not read query from graphql file: ";
+	public static final String MAP_TO_UPTIME_FAILED = "Failed to mapToUptime with uptime: ";
+	public static final String MAP_TO_UPTIME_MIN_FAILED = "Failed to mapToUptimeMin with uptime: ";
 }
