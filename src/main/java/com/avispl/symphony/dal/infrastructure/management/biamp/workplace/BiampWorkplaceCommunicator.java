@@ -7,8 +7,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -22,6 +24,7 @@ import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.security.auth.login.FailedLoginException;
+import org.apache.commons.collections.CollectionUtils;
 
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
@@ -36,10 +39,17 @@ import com.avispl.symphony.dal.communicator.RestCommunicator;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.RequestStateHandler;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.ApiConstant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.MonitoringUtil;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.Authentication;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Invitation;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Organization;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Profile;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.requests.AuthenticationReq;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.requests.GraphQLReq;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.InvitationStatus;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.ResponseType;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
@@ -76,7 +86,11 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private BiampWorkplaceDataLoader dataLoader;
 	/* Stores local representations of aggregated devices. */
 	private List<AggregatedDevice> localAggregatedDevices;
+	/* The current authentication, including tokens and expiry information. */
 	private Authentication authentication;
+	/* The profile information of the currently authenticated user. */
+	private Profile profile;
+	private List<Organization> organizations;
 
 	public BiampWorkplaceCommunicator() {
 		this.reentrantLock = new ReentrantLock();
@@ -89,6 +103,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.localExtendedStatistics = new ExtendedStatistics();
 		this.localAggregatedDevices = new ArrayList<>();
 		this.authentication = new Authentication();
+		this.profile = new Profile();
+		this.organizations = new ArrayList<>();
 	}
 
 	/**
@@ -124,6 +140,9 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	protected HttpHeaders putExtraRequestHeaders(HttpMethod httpMethod, String uri, HttpHeaders headers) throws Exception {
 		if (uri.equals(ApiConstant.GET_TOKEN_ENDPOINT)) {
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+		} else {
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			headers.setBearerAuth(this.authentication.getAccessToken());
 		}
 
 		return super.putExtraRequestHeaders(httpMethod, uri, headers);
@@ -134,6 +153,12 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.reentrantLock.lock();
 		try {
 			this.setupData();
+			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
+			Map<String, String> statistics = new HashMap<>();
+			statistics.putAll(this.getOrganizationProperties());
+
+			extendedStatistics.setStatistics(statistics);
+			this.localExtendedStatistics = extendedStatistics;
 		} finally {
 			this.reentrantLock.unlock();
 		}
@@ -142,12 +167,12 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics() throws Exception {
-		return null;
+		return new ArrayList<>();
 	}
 
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics(List<String> list) throws Exception {
-		return null;
+		return new ArrayList<>();
 	}
 
 	@Override
@@ -164,6 +189,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	protected void internalDestroy() {
 		this.logger.info(Constant.DESTROY_INTERNAL_INFO + this.getClass().getSimpleName());
 
+		this.organizations = null;
+		this.profile = null;
 		this.authentication = null;
 		this.localAggregatedDevices = null;
 		this.localExtendedStatistics = null;
@@ -202,13 +229,56 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	private void setupData() throws Exception {
 		this.requestStateHandler.clearRequests();
+		this.organizations.clear();
+
 		if (this.authentication.isInvalid()) {
 			this.logger.info(Constant.REFRESHING_TOKENS_INFO);
 			AuthenticationReq requestBody = new AuthenticationReq(this.getLogin(), this.authentication.getRefreshToken());
 			this.authentication = this.sendRequest(ApiConstant.GET_TOKEN_ENDPOINT, requestBody.toFormData(), ResponseType.AUTHENTICATION);
 		}
+		this.profile = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, GraphQLReq.getProfile(), ResponseType.PROFILE);
+		if (this.profile != null && CollectionUtils.isNotEmpty(this.profile.getMemberships())) {
+			this.profile.getMemberships().forEach(membership -> {
+				Organization organization = membership.getOrganization();
+				InvitationStatus invitationStatus = this.profile.getInvitations().stream()
+						.filter(invitation -> invitation.getOrgId().equals(organization.getId()))
+						.map(Invitation::getStatus).findFirst().orElse(InvitationStatus.NOT_AVAILABLE);
+				organization.setMembershipRole(membership.getRole());
+				organization.setMembershipStatus(membership.getStatus());
+				organization.setInvitationStatus(invitationStatus);
+
+				this.organizations.add(organization);
+			});
+		}
 
 		this.requestStateHandler.verifyRequestState();
+	}
+
+	/**
+	 * Generates monitoring properties for all available organizations.
+	 * <p>
+	 * Each organization is assigned a group name based on its index and
+	 * expanded into key-value property entries using {@link MonitoringUtil}.
+	 * </p>
+	 * Returns an empty map (with a warning) if no organizations exist.
+	 *
+	 * @return map of organization property keys and values
+	 */
+	private Map<String, String> getOrganizationProperties() {
+		if (CollectionUtils.isEmpty(this.organizations)) {
+			this.logger.warn(Constant.ORGANIZATIONS_EMPTY_WARNING);
+			return Collections.emptyMap();
+		}
+		Map<String, String> properties = new HashMap<>();
+		for (int i = 0; i < this.organizations.size(); i++) {
+			Organization organization = this.organizations.get(i);
+			String groupName = String.format(Constant.GROUP_FORMAT, Constant.ORGANIZATION_GROUPS, i + 1);
+			properties.putAll(MonitoringUtil.generateProperties(
+					OrganizationProperty.values(), groupName, property -> MonitoringUtil.mapToOrganizationProperty(organization, property)
+			));
+		}
+
+		return properties;
 	}
 
 	/**

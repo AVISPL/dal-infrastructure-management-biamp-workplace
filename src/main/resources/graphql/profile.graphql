@@ -1,0 +1,26 @@
+query Profile {
+  profile {
+    id
+    name
+    email
+    memberships {
+      id
+      userId
+      role
+      status
+      orgId
+      organization {
+        id
+        domain
+        name
+      }
+    }
+    invitations(filter: null) {
+      id
+      orgId
+      email
+      expiresAt
+      status
+    }
+  }
+}

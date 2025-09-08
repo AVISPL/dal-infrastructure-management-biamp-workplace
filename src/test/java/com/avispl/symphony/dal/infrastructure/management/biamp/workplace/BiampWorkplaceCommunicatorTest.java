@@ -31,7 +31,7 @@ class BiampWorkplaceCommunicatorTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		this.communicator = new BiampWorkplaceCommunicator();
-		this.communicator.setHost("api.evoko.app");
+		this.communicator.setHost("");
 		this.communicator.setPort(443);
 		this.communicator.setLogin("");
 		this.communicator.setPassword("");

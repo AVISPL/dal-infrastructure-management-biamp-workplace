@@ -14,12 +14,21 @@ public class Constant {
 		// Prevent instantiation
 	}
 
+	//	Formats
+	public static final String GROUP_FORMAT = "%s_%02d";
+	public static final String PROPERTY_FORMAT = "%s#%s";
+
 	//	Special characters
 	public static final String COMMA = ",";
+
+	//	Groups
+	public static final String ORGANIZATION_GROUPS = "Organization";
 
 	//	Values
 	public static final String NOT_AVAILABLE = "N/A";
 	public static final String REFRESH_TOKEN_INVALID_MESSAGE = "Errors.OIDCSession.RefreshTokenInvalid";
+	public static final String GRAPHQL_FOLDER = "graphql/";
+	public static final String GRAPHQL_EXTENSION = ".graphql";
 
 	//	Info messages
 	public static final String INITIAL_INTERNAL_INFO = "Initialing internal state of instance: ";
@@ -28,10 +37,13 @@ public class Constant {
 
 	//	Warning messages
 	public static final String SENT_REQUEST_NULL_WARNING = "Sent request is null. Endpoint: %s, ResponseClass: %s";
+	public static final String ORGANIZATIONS_EMPTY_WARNING = "The organizations is empty, returning empty map.";
 
 	//	Fail messages
 	public static final String REQUEST_APIS_FAILED = "Unable to process requested API sections: [%s], error reported: [%s]";
 	public static final String READ_PROPERTIES_FILE_FAILED = "Failed to load properties file: ";
 	public static final String LOGIN_FAILED = "Failed to login, please check the credentials";
 	public static final String FETCH_DATA_FAILED = "Exception while fetching data. Endpoint: %s, ResponseClass: %s";
+	public static final String FIND_GRAPHQL_FOLDER_FAILED = "Can not find the GraphQL folder: ";
+	public static final String READ_GRAPHQL_QUERY_FAILED = "Can not read query from graphql file: ";
 }
