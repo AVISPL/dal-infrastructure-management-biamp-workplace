@@ -27,6 +27,7 @@ public class Constant {
 
 	//	Groups
 	public static final String ORGANIZATION_GROUPS = "Organization";
+	public static final String FIRMWARE_GROUP = "Firmware";
 
 	//	Values
 	public static final String NOT_AVAILABLE = "N/A";

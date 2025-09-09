@@ -56,6 +56,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.requests.GraphQLReq;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.InvitationStatus;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.ResponseType;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
@@ -193,6 +194,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 				Map<String, String> statistics = new HashMap<>();
 				statistics.putAll(this.getOverviewProperties(device));
+				statistics.putAll(this.getFirmwareProperties(device));
 
 				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers(device);
 				Optional.of(controllableProperties).filter(List::isEmpty).ifPresent(l -> l.add(Constant.DUMMY_CONTROLLER));
@@ -405,6 +407,24 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				OverviewProperty.values(),
 				null,
 				property -> MonitoringUtil.mapToOverviewProperty(device, property)
+		);
+	}
+
+	/**
+	 * Generates firmware properties for an aggregated device.
+	 * <p>
+	 * This method uses {@link MonitoringUtil} to map each {@link FirmwareProperty}
+	 * to its corresponding value from the provided {@link Device}.
+	 * </p>
+	 *
+	 * @param device the device for which firmware properties are generated; must not be {@code null}
+	 * @return a map of firmware property keys and values for the specified device
+	 */
+	private Map<String, String> getFirmwareProperties(Device device) {
+		return MonitoringUtil.generateProperties(
+				FirmwareProperty.values(),
+				Constant.FIRMWARE_GROUP,
+				property -> MonitoringUtil.mapToFirmwareProperty(device, property)
 		);
 	}
 

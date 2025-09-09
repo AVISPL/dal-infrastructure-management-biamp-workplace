@@ -20,10 +20,14 @@ import org.apache.commons.logging.LogFactory;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.bases.BaseProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Attributes;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Channel;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Device;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Firmware;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Status;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Type;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Organization;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.DeviceState;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
@@ -124,6 +128,42 @@ public class MonitoringUtil {
 				return organization.getMembershipRole().getValue();
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOrganizationProperty()", property));
+				return null;
+		}
+	}
+
+	/**
+	 * Maps a {@link Device} instance to a string value based on the given {@link FirmwareProperty}.
+	 *
+	 * @param device the device to extract firmware values from; may be {@code null}
+	 * @param property the firmware property to map
+	 * @return a string value of the requested property, or {@code null} if the device
+	 * is {@code null} or the property is not supported
+	 */
+	public static String mapToFirmwareProperty(Device device, FirmwareProperty property) {
+		if (device == null) {
+			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Device"));
+			return null;
+		}
+
+		switch (property) {
+			case ASSIGNED_FIRMWARE:
+				Firmware assignedFirmware = Optional.ofNullable(device.getAssignedFirmware()).orElse(new Firmware());
+				return mapToValue(assignedFirmware.getVersion());
+			case FIRMWARE:
+				Status status = Optional.ofNullable(device.getStatus()).orElse(new Status());
+				return mapToValue(status.getFirmware());
+			case FIRMWARE_CHANNEL:
+				Channel channel = Optional.ofNullable(device.getChannel()).orElse(new Channel());
+				return mapToValue(channel.getName());
+			case LATEST_FIRMWARE:
+				Firmware lastFirmware = Optional.ofNullable(device.getLatestFirmware()).orElse(new Firmware());
+				return mapToValue(lastFirmware.getVersion());
+			case NEXT_FIRMWARE:
+				Firmware nextFirmware = Optional.ofNullable(device.getNextFirmware()).orElse(new Firmware());
+				return mapToValue(nextFirmware.getVersion());
+			default:
+				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToFirmwareProperty()", property));
 				return null;
 		}
 	}
