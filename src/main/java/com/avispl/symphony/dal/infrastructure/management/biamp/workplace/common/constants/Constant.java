@@ -3,6 +3,9 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants;
 
+import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
+import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty.Button;
+
 /**
  * Utility class that defines constant values used across the application.
  *
@@ -20,6 +23,7 @@ public class Constant {
 
 	//	Special characters
 	public static final String COMMA = ",";
+	public static final String SPACE = " ";
 
 	//	Groups
 	public static final String ORGANIZATION_GROUPS = "Organization";
@@ -29,6 +33,8 @@ public class Constant {
 	public static final String REFRESH_TOKEN_INVALID_MESSAGE = "Errors.OIDCSession.RefreshTokenInvalid";
 	public static final String GRAPHQL_FOLDER = "graphql/";
 	public static final String GRAPHQL_EXTENSION = ".graphql";
+	public static final String REBOOT = "Reboot";
+	public static final AdvancedControllableProperty DUMMY_CONTROLLER = new AdvancedControllableProperty(null, null, new Button(), null);
 
 	//	Info messages
 	public static final String INITIAL_INTERNAL_INFO = "Initialing internal state of instance: ";
@@ -40,6 +46,7 @@ public class Constant {
 	public static final String ORGANIZATIONS_EMPTY_WARNING = "The organizations is empty, returning empty map.";
 	public static final String OBJECT_NULL_WARNING = "%s object is null, returning null value.";
 	public static final String UNSUPPORTED_PROPERTY_WARNING = "Unsupported %s with property %s.";
+	public static final String CONTROLLABLE_PROPS_EMPTY_WARNING = "ControllableProperties list is null or empty, skipping control operation";
 
 	//	Fail messages
 	public static final String REQUEST_APIS_FAILED = "Unable to process requested API sections: [%s], error reported: [%s]";
@@ -50,4 +57,7 @@ public class Constant {
 	public static final String READ_GRAPHQL_QUERY_FAILED = "Can not read query from graphql file: ";
 	public static final String MAP_TO_UPTIME_FAILED = "Failed to mapToUptime with uptime: ";
 	public static final String MAP_TO_UPTIME_MIN_FAILED = "Failed to mapToUptimeMin with uptime: ";
+	public static final String FETCH_AGGREGATED_DATA_FAILED = "Failed to fetch aggregated data for device id: %s";
+	public static final String DETERMINE_DEVICE_FAILED = "Unable to determine the device to control with ID: ";
+	public static final String REBOOT_DEVICE_FAILED = "Unable to reboot device. Verify device state and try again.";
 }

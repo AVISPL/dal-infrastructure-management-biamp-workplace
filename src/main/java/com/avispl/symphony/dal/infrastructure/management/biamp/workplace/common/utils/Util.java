@@ -14,6 +14,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Device;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.DeviceState;
 
 /**
  * Utility class for this adapter. This class includes helper methods to extract and convert properties.
@@ -69,5 +71,15 @@ public class Util {
 			Thread.currentThread().interrupt();
 			LOGGER.error(e.getMessage(), e);
 		}
+	}
+
+	/**
+	 * Checks whether a {@link Device} is currently online.
+	 *
+	 * @param state the {@link DeviceState} of the device, may be {@code null}
+	 * @return {@code true} if the state is {@link DeviceState#ONLINE}, otherwise {@code false}
+	 */
+	public static boolean isDeviceOnline(DeviceState state) {
+		return DeviceState.ONLINE.equals(state);
 	}
 }

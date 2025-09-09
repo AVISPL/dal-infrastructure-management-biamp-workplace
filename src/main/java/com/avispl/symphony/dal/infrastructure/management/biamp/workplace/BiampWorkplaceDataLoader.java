@@ -4,11 +4,18 @@
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.ApiConstant;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.Util;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Device;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Firmware;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.requests.GraphQLReq;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.ResponseType;
 
 /**
  * This class implements a data loader that periodically collects settings data
@@ -24,6 +31,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 
 	private final Log logger = LogFactory.getLog(this.getClass());
 	private final BiampWorkplaceCommunicator communicator;
+	private final List<Device> devices;
 
 	private volatile boolean inProgress;
 	private volatile boolean devicePaused;
@@ -31,8 +39,9 @@ public class BiampWorkplaceDataLoader implements Runnable {
 	private volatile boolean flag;
 	private volatile long nextCollectionTime;
 
-	public BiampWorkplaceDataLoader(BiampWorkplaceCommunicator communicator) {
+	public BiampWorkplaceDataLoader(BiampWorkplaceCommunicator communicator, List<Device> devices) {
 		this.communicator = communicator;
+		this.devices = devices;
 
 		this.inProgress = true;
 		this.devicePaused = true;
@@ -104,7 +113,18 @@ public class BiampWorkplaceDataLoader implements Runnable {
 	 * Collects and updates settings data for all registered devices.
 	 */
 	private void collectAggregatedDeviceData() {
+		synchronized (this.devices) {
+			for (Device device : this.devices) {
+				try {
+					GraphQLReq query = GraphQLReq.getNextFirmware(device.getId(), device.getStatus().getFirmware(), device.getFirmwarePublicKey());
+					Firmware nextFirmware = this.communicator.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, query, ResponseType.NEXT_FIRMWARE);
 
+					device.setNextFirmware(nextFirmware);
+				} catch (Exception e) {
+					this.logger.error(String.format(Constant.FETCH_AGGREGATED_DATA_FAILED, device.getId()), e);
+				}
+			}
+		}
 	}
 
 	/**

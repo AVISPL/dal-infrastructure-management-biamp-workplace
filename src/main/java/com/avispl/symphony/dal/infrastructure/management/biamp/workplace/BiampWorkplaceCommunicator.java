@@ -11,10 +11,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -27,6 +30,7 @@ import javax.security.auth.login.FailedLoginException;
 import org.apache.commons.collections.CollectionUtils;
 
 import com.avispl.symphony.api.dal.control.Controller;
+import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
@@ -39,8 +43,12 @@ import com.avispl.symphony.dal.communicator.RestCommunicator;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.RequestStateHandler;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.ApiConstant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.ControllerUtil;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.MonitoringUtil;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.Util;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.Authentication;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.DeviceCommand;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Device;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Invitation;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Organization;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Profile;
@@ -48,6 +56,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.requests.GraphQLReq;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.InvitationStatus;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.ResponseType;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.util.StringUtils;
@@ -65,32 +74,35 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			GeneralProperty.MONITORED_DEVICES_TOTAL.getName()
 	));
 
-	/* Lock for thread-safe operations. */
+	/** Lock for thread-safe operations. */
 	private final ReentrantLock reentrantLock;
-	/* Application configuration loaded from {@code version.properties}. */
+	/** Application configuration loaded from {@code version.properties}. */
 	private final Properties versionProperties;
-	/* Jackson object mapper for JSON serialization and deserialization. */
+	/** Jackson object mapper for JSON serialization and deserialization. */
 	private final ObjectMapper objectMapper;
-	/* Handles request status tracking and error detection. */
+	/** Handles request status tracking and error detection. */
 	private final RequestStateHandler requestStateHandler;
 
-	/* Device adapter instantiation timestamp. */
+	/** Device adapter instantiation timestamp. */
 	private Long adapterInitializationTimestamp;
-	/* Duration (in milliseconds) of the last monitoring cycle. */
+	/** Duration (in milliseconds) of the last monitoring cycle. */
 	private Long lastMonitoringCycleDuration;
-	/* Stores extended statistics to be sent to the aggregator. */
+	/** Stores extended statistics to be sent to the aggregator. */
 	private ExtendedStatistics localExtendedStatistics;
-	/* Executes asynchronous tasks for data loader. */
+	/** Executes asynchronous tasks for data loader. */
 	private ExecutorService executorService;
-	/* Loads data from APIs for aggregated devices. */
+	/** Loads data from APIs for aggregated devices. */
 	private BiampWorkplaceDataLoader dataLoader;
-	/* Stores local representations of aggregated devices. */
+	/** Stores local representations of aggregated devices. */
 	private List<AggregatedDevice> localAggregatedDevices;
-	/* The current authentication, including tokens and expiry information. */
+	/** The current authentication, including tokens and expiry information. */
 	private Authentication authentication;
-	/* The profile information of the currently authenticated user. */
+	/** The profile information of the currently {@link #authentication} user. */
 	private Profile profile;
+	/** The list of organizations associated with the {@link #profile} user. */
 	private List<Organization> organizations;
+	/** The list of devices from all associated {@link #organizations}. */
+	private final List<Device> devices;
 
 	public BiampWorkplaceCommunicator() {
 		this.reentrantLock = new ReentrantLock();
@@ -105,6 +117,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.authentication = new Authentication();
 		this.profile = new Profile();
 		this.organizations = new ArrayList<>();
+		this.devices = Collections.synchronizedList(new ArrayList<>());
 	}
 
 	/**
@@ -168,28 +181,82 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics() throws Exception {
-		return new ArrayList<>();
+		this.setupDataLoader();
+		List<AggregatedDevice> aggregatedDevices = new ArrayList<>();
+		synchronized (this.devices) {
+			this.devices.forEach(device -> {
+				AggregatedDevice aggregatedDevice = new AggregatedDevice();
+				aggregatedDevice.setDeviceId(device.getId());
+				aggregatedDevice.setDeviceName(MonitoringUtil.mapToDeviceName(device));
+				aggregatedDevice.setDeviceOnline(Util.isDeviceOnline(device.getState()));
+				aggregatedDevice.setSerialNumber(device.getSerial());
+
+				Map<String, String> statistics = new HashMap<>();
+				statistics.putAll(this.getOverviewProperties(device));
+
+				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers(device);
+				Optional.of(controllableProperties).filter(List::isEmpty).ifPresent(l -> l.add(Constant.DUMMY_CONTROLLER));
+
+				aggregatedDevice.setProperties(statistics);
+				aggregatedDevice.setControllableProperties(controllableProperties);
+				aggregatedDevices.add(aggregatedDevice);
+			});
+		}
+		this.localAggregatedDevices = aggregatedDevices;
+		this.versionProperties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), String.valueOf(this.lastMonitoringCycleDuration));
+		this.versionProperties.setProperty(GeneralProperty.MONITORED_DEVICES_TOTAL.getProperty(), String.valueOf(this.localAggregatedDevices.size()));
+		return this.localAggregatedDevices;
 	}
 
 	@Override
 	public List<AggregatedDevice> retrieveMultipleStatistics(List<String> list) throws Exception {
-		return new ArrayList<>();
+		return this.retrieveMultipleStatistics().stream()
+				.filter(aggregatedDevice -> list.contains(aggregatedDevice.getDeviceId()))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public void controlProperty(ControllableProperty controllableProperty) throws Exception {
+		this.reentrantLock.lock();
+		try {
+			if (OverviewProperty.REBOOT.getName().equals(controllableProperty.getProperty())) {
+				Device device = this.devices.stream()
+						.filter(d -> d.getId().equals(controllableProperty.getDeviceId())).findFirst()
+						.orElseThrow(() -> new IllegalStateException(Constant.DETERMINE_DEVICE_FAILED + controllableProperty.getDeviceId()));
+				GraphQLReq query = GraphQLReq.rebootDevice(device.getOrgId(), device.getId());
+				DeviceCommand response = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, query, ResponseType.REBOOT_DEVICE);
 
+				if (response == null) {
+					throw new IllegalStateException(Constant.REBOOT_DEVICE_FAILED);
+				}
+				if (!response.isSuccess()) {
+					throw new IllegalStateException(Optional.ofNullable(response.getErrorMessage()).orElse(Constant.REBOOT_DEVICE_FAILED));
+				}
+				this.disconnect();
+			}
+		} finally {
+			this.reentrantLock.unlock();
+		}
 	}
 
 	@Override
-	public void controlProperties(List<ControllableProperty> list) throws Exception {
-
+	public void controlProperties(List<ControllableProperty> controllableProperties) throws Exception {
+		if (CollectionUtils.isEmpty(controllableProperties)) {
+			if (this.logger.isWarnEnabled()) {
+				this.logger.warn(Constant.CONTROLLABLE_PROPS_EMPTY_WARNING);
+			}
+			return;
+		}
+		for (ControllableProperty controllableProperty : controllableProperties) {
+			this.controlProperty(controllableProperty);
+		}
 	}
 
 	@Override
 	protected void internalDestroy() {
 		this.logger.info(Constant.DESTROY_INTERNAL_INFO + this.getClass().getSimpleName());
 
+		this.devices.clear();
 		this.organizations = null;
 		this.profile = null;
 		this.authentication = null;
@@ -231,6 +298,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private void setupData() throws Exception {
 		this.requestStateHandler.clearRequests();
 		this.organizations.clear();
+		this.devices.clear();
 
 		if (this.authentication.isInvalid()) {
 			this.logger.info(Constant.REFRESHING_TOKENS_INFO);
@@ -239,6 +307,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		}
 		this.profile = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, GraphQLReq.getProfile(), ResponseType.PROFILE);
 		if (this.profile != null && CollectionUtils.isNotEmpty(this.profile.getMemberships())) {
+			//	Collect data for this.organizations
 			this.profile.getMemberships().forEach(membership -> {
 				Organization organization = membership.getOrganization();
 				InvitationStatus invitationStatus = this.profile.getInvitations().stream()
@@ -250,9 +319,34 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 				this.organizations.add(organization);
 			});
+			//	Collect data for this.devices
+			for (Organization organization : this.organizations) {
+				List<Device> fetchedDevices = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, GraphQLReq.getDevices(organization.getId()), ResponseType.DEVICES);
+				if (CollectionUtils.isNotEmpty(fetchedDevices)) {
+					this.devices.addAll(fetchedDevices);
+				}
+			}
 		}
 
 		this.requestStateHandler.verifyRequestState();
+	}
+
+	/**
+	 * Sets up the data loader to collect and update data for aggregated devices.
+	 * <p>
+	 * This method initializes a single-thread executor and submits a {@link BiampWorkplaceDataLoader}
+	 * task if not already initialized. It also updates the next collection time for data retrieval
+	 * and refreshes the timestamp used to validate collected statistics.
+	 * </p>
+	 */
+	private void setupDataLoader() {
+		if (this.executorService == null) {
+			this.executorService = Executors.newFixedThreadPool(1);
+			this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices);
+			this.executorService.submit(this.dataLoader);
+		}
+		this.dataLoader.setNextCollectionTime(System.currentTimeMillis());
+		this.dataLoader.updateValidRetrieveStatisticsTimestamp();
 	}
 
 	/**
@@ -297,6 +391,44 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	}
 
 	/**
+	 * Generates general properties for an aggregated device.
+	 * <p>
+	 * This method uses {@link MonitoringUtil} to map each {@link OverviewProperty}
+	 * to its corresponding value from the provided {@link Device}.
+	 * </p>
+	 *
+	 * @param device the device for which overview properties are generated; must not be {@code null}
+	 * @return a map of overview property keys and values for the specified device
+	 */
+	private Map<String, String> getOverviewProperties(Device device) {
+		return MonitoringUtil.generateProperties(
+				OverviewProperty.values(),
+				null,
+				property -> MonitoringUtil.mapToOverviewProperty(device, property)
+		);
+	}
+
+	/**
+	 * Generates overview control properties for an aggregated device.
+	 * <p>
+	 * This method creates a list of {@link AdvancedControllableProperty} objects
+	 * that allow interaction with the device's overview-level controls, such as reboot.
+	 * </p>
+	 *
+	 * @return a list of controllable properties for the device overview
+	 */
+	private List<AdvancedControllableProperty> getOverviewControllers(Device device) {
+		List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
+		if (Util.isDeviceOnline(device.getState())) {
+			controllableProperties.add(ControllerUtil.generateControllableButton(
+					OverviewProperty.REBOOT.getName(), OverviewProperty.REBOOT.getName(), "Rebooting", 0L
+			));
+		}
+
+		return controllableProperties;
+	}
+
+	/**
 	 * Sends a POST request to the given endpoint and maps the JSON response into the specified type.
 	 * <p>
 	 * The request is tracked by {@link RequestStateHandler}, and errors are logged
@@ -310,16 +442,18 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	 * @return the mapped response object, or {@code null} if deserialization failed
 	 * @throws Exception if an unrecoverable error occurs while sending the request
 	 */
-	private <T> T sendRequest(String endpoint, Object request, ResponseType responseType) throws Exception {
+	public <T> T sendRequest(String endpoint, Object request, ResponseType responseType) throws Exception {
 		String responseClassName = responseType.getClazz().getSimpleName();
 		try {
 			this.requestStateHandler.pushRequest(endpoint);
 			String jsonResponse = super.doPost(endpoint, request, String.class);
 			JsonNode responseNode = responseType.getPaths(this.objectMapper.readTree(jsonResponse));
 			@SuppressWarnings("unchecked")
-			T response = (T) this.objectMapper.treeToValue(responseNode, responseType.getClazz());
+			T response = responseType.isCollection()
+					? (T) this.objectMapper.convertValue(responseNode, responseType.getTypeRef(this.objectMapper))
+					: (T) this.objectMapper.treeToValue(responseNode, responseType.getClazz());
 
-			if (response == null && this.logger.isWarnEnabled()) {
+			if (response == null) {
 				this.logger.warn(String.format(Constant.SENT_REQUEST_NULL_WARNING, endpoint, responseClassName));
 			}
 			this.requestStateHandler.resolveError(endpoint);

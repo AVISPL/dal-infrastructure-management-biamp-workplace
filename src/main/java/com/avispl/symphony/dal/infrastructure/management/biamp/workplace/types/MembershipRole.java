@@ -4,9 +4,10 @@
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types;
 
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Membership;
 
 /**
- *
+ * Represents the roles that a user can have within a {@link Membership}.
  *
  * @author Kevin / Symphony Dev Team
  * @since 1.0.0

@@ -1,6 +1,9 @@
-
+/*
+ * Copyright (c) 2025 AVI-SPL, Inc. All Rights Reserved.
+ */
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils;
 
+import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -9,19 +12,25 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.bases.BaseProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Attributes;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Device;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Type;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Organization;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.DeviceState;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
- * Utility class providing helper methods for monitoring and property mapping.
+ * Utility class providing helper methods for monitoring property.
  *
  * @author Kevin / Symphony Dev Team
  * @since 1.0.0
@@ -117,6 +126,90 @@ public class MonitoringUtil {
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOrganizationProperty()", property));
 				return null;
 		}
+	}
+
+	/**
+	 * Maps a {@link Device} instance to a string value based on the given {@link OverviewProperty}.
+	 *
+	 * @param device the device to extract values from; may be {@code null}
+	 * @param property the property to map
+	 * @return a string value of the requested property, or {@code null} if the device is {@code null}
+	 * or the property is not supported
+	 */
+	public static String mapToOverviewProperty(Device device, OverviewProperty property) {
+		if (device == null) {
+			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Device"));
+			return null;
+		}
+
+		switch (property) {
+			case MODEL:
+				return removeAccents(mapToValue(getDeviceAttributes(device).getProductModel()));
+			case REBOOT:
+				return Util.isDeviceOnline(device.getState()) ? Constant.NOT_AVAILABLE : Constant.REBOOT;
+			case STATE:
+				DeviceState state = Optional.ofNullable(device.getState()).orElse(DeviceState.NOT_AVAILABLE);
+				return state.getValue();
+			case TYPE:
+				return removeAccents(mapToValue(getDeviceType(device).getName()));
+			default:
+				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOverviewProperty()", property));
+				return null;
+		}
+	}
+
+	/**
+	 * Generates a human-readable name for the given device by combining its type and model.
+	 * <p>
+	 * The device type and model are converted to title case.
+	 * If both values are null or empty, {@link Constant#NOT_AVAILABLE} is returned.
+	 * </p>
+	 *
+	 * @param device the {@link Device} object to generate the name for; must not be {@code null}
+	 * @return a string representing the device name in the format "Type Model",
+	 * or {@link Constant#NOT_AVAILABLE} if both type and model are missing
+	 */
+	public static String mapToDeviceName(Device device) {
+		String typeName = removeAccents(toTitleCase(getDeviceType(device).getName()));
+		String modelName = removeAccents(toTitleCase(getDeviceAttributes(device).getProductModel()));
+		String deviceName = Stream.of(typeName, modelName).filter(s -> s != null && !s.isEmpty()).collect(Collectors.joining(Constant.SPACE));
+
+		return deviceName.isEmpty() ? Constant.NOT_AVAILABLE : deviceName;
+	}
+
+	/**
+	 * Removes all diacritical marks (accents) from the input string.
+	 *
+	 * @param input the string to normalize
+	 * @return the normalized string without accents, or null if input is null
+	 */
+	public static String removeAccents(String input) {
+		if (input == null) {
+			return null;
+		}
+		String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+
+		return normalized.replaceAll("\\p{M}", "");
+	}
+
+	/**
+	 * Retrieves the {@link Type} of the given {@link Device}.
+	 *
+	 * @param device the device from which to retrieve the type; may be {@code null}
+	 * @return the device type, or a new {@link Type} if none is defined
+	 */
+	private static Type getDeviceType(Device device) {
+		return Optional.ofNullable(device.getType()).orElse(new Type());
+	}
+
+	/**
+	 * Retrieves the {@link Attributes} of the given {@link Device}.
+	 *
+	 * @param device the device from which to retrieve the attributes; may be {@code null}
+	 * @return the device attributes, or a new {@link Attributes} if none are defined
+	 */
+	private static Attributes getDeviceAttributes(Device device) {
+		return Optional.ofNullable(device.getAttributes()).orElse(new Attributes());
 	}
 
 	/**
