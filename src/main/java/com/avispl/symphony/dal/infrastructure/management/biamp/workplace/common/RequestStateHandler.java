@@ -7,6 +7,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.http.HttpStatus;
+
+import javax.security.auth.login.FailedLoginException;
+
+import com.avispl.symphony.api.dal.error.CommandFailureException;
 import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
 
@@ -37,12 +42,37 @@ public class RequestStateHandler {
 	}
 
 	/**
-	 * Add an error to the {@link #apiErrors}
+	 * Handles and records API errors by either rethrowing specific exceptions or storing them in {@link #apiErrors}.
+	 * <p>
+	 * If the given {@code error} is an instance of:
+	 * <ul>
+	 *   <li>{@link ResourceNotReachableException} – it is rethrown as a new {@code ResourceNotReachableException}.</li>
+	 *   <li>{@link FailedLoginException} – it is rethrown as a new {@code FailedLoginException}.</li>
+	 *   <li>{@link CommandFailureException} – if it has status code {@code 400 BAD_REQUEST} and contains
+	 *       {@link Constant#REFRESH_TOKEN_INVALID_MESSAGE}, it is rethrown as a {@code FailedLoginException}.</li>
+	 * </ul>
+	 * Otherwise, the error is added to {@link #apiErrors} under the given {@code apiSection}.
 	 *
-	 * @param apiSection api section identifier (property group)
-	 * @param error instance of Throwable thrown
+	 * @param apiSection the identifier of the API section (property group) where the error occurred
+	 * @param error the exception instance to handle
+	 * @throws ResourceNotReachableException if the error is a {@code ResourceNotReachableException}
+	 * @throws FailedLoginException if the error is a {@code FailedLoginException} or an invalid refresh token case
 	 */
-	public void pushError(String apiSection, Throwable error) {
+	public void pushError(String apiSection, Exception error) throws ResourceNotReachableException, FailedLoginException {
+		if (error instanceof ResourceNotReachableException) {
+			throw new ResourceNotReachableException(error.getMessage(), error);
+		}
+		if (error instanceof FailedLoginException) {
+			throw new FailedLoginException(error.getMessage());
+		}
+		if (error instanceof CommandFailureException) {
+			boolean isBadRequest = ((CommandFailureException) error).getStatusCode() == HttpStatus.BAD_REQUEST.value();
+			boolean isInvalidRefreshToken = error.getMessage().contains(Constant.REFRESH_TOKEN_INVALID_MESSAGE);
+			if (isBadRequest && isInvalidRefreshToken) {
+				throw new FailedLoginException(error.getMessage());
+			}
+		}
+
 		this.apiErrors.put(apiSection, error);
 	}
 

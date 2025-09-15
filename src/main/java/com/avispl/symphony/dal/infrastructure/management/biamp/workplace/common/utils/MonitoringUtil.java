@@ -29,6 +29,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.DeviceState;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.util.StringUtils;
@@ -194,6 +195,38 @@ public class MonitoringUtil {
 				return removeAccents(mapToValue(getDeviceType(device).getName()));
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOverviewProperty()", property));
+				return null;
+		}
+	}
+
+	/**
+	 * Maps a {@link Device} instance to a string value based on the given {@link StatusProperty}.
+	 *
+	 * @param device the device to extract values from; may be {@code null}
+	 * @param property the property to map
+	 * @return a string value of the requested property, or {@code null} if the device or its status is {@code null}
+	 * or the property is not supported
+	 */
+	public static String mapToStatusProperty(Device device, StatusProperty property) {
+		if (device == null) {
+			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Device"));
+			return null;
+		}
+		Status status = device.getStatus();
+		if (status == null) {
+			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Device Status"));
+			return null;
+		}
+
+		switch (property) {
+			case CPU_UTILIZATION:
+				return mapToValue(status.getCpuUtilization());
+			case TEMPERATURE:
+				return mapToValue(status.getTemperature());
+			case TIMESTAMP:
+				return mapToValue(status.getTimestamp());
+			default:
+				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToStatusProperty()", property));
 				return null;
 		}
 	}

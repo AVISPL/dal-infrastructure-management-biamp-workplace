@@ -32,10 +32,11 @@ class BiampWorkplaceCommunicatorTest {
 	void setUp() throws Exception {
 		this.communicator = new BiampWorkplaceCommunicator();
 		this.communicator.setHost("");
-		this.communicator.setPort(443);
+		this.communicator.setPort(442);
 		this.communicator.setLogin("");
 		this.communicator.setPassword("");
 		this.communicator.init();
+		this.communicator.ping();
 		this.communicator.connect();
 	}
 

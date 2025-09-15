@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,8 +34,6 @@ import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
-import com.avispl.symphony.api.dal.error.CommandFailureException;
-import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.api.dal.monitor.aggregator.Aggregator;
 import com.avispl.symphony.dal.communicator.RestCommunicator;
@@ -58,6 +55,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.I
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.ResponseType;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.util.StringUtils;
@@ -195,6 +193,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				Map<String, String> statistics = new HashMap<>();
 				statistics.putAll(this.getOverviewProperties(device));
 				statistics.putAll(this.getFirmwareProperties(device));
+				statistics.putAll(this.getStatusProperties(device));
 
 				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers(device);
 				Optional.of(controllableProperties).filter(List::isEmpty).ifPresent(l -> l.add(Constant.DUMMY_CONTROLLER));
@@ -293,7 +292,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			properties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), "0");
 			properties.setProperty(GeneralProperty.MONITORED_DEVICES_TOTAL.getProperty(), "0");
 		} catch (IOException e) {
-			this.logger.error(Constant.READ_PROPERTIES_FILE_FAILED + e.getMessage());
+			this.logger.error(Constant.READ_PROPERTIES_FILE_FAILED, e);
 		}
 	}
 
@@ -429,6 +428,24 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	}
 
 	/**
+	 * Generates status properties for an aggregated device.
+	 * <p>
+	 * This method uses {@link MonitoringUtil} to map each {@link StatusProperty}
+	 * to its corresponding value from the provided {@link Device}.
+	 * </p>
+	 *
+	 * @param device the device for which status properties are generated; must not be {@code null}
+	 * @return a map of status property keys and values for the specified device
+	 */
+	private Map<String, String> getStatusProperties(Device device) {
+		return MonitoringUtil.generateProperties(
+				StatusProperty.values(),
+				Constant.STATUS_GROUP,
+				property -> MonitoringUtil.mapToStatusProperty(device, property)
+		);
+	}
+
+	/**
 	 * Generates overview control properties for an aggregated device.
 	 * <p>
 	 * This method creates a list of {@link AdvancedControllableProperty} objects
@@ -452,8 +469,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	 * Sends a POST request to the given endpoint and maps the JSON response into the specified type.
 	 * <p>
 	 * The request is tracked by {@link RequestStateHandler}, and errors are logged
-	 * or rethrown depending on their type. If the response is {@code null}, a warning
-	 * is logged. Any failed login attempts are handled via {@link #handleFailedLogin(Exception)}.
+	 * or rethrown depending on their type. If the response is {@code null}, a warning is logged.
 	 *
 	 * @param <T> the expected response type
 	 * @param endpoint the target endpoint URL
@@ -479,35 +495,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			this.requestStateHandler.resolveError(endpoint);
 
 			return response;
-		} catch (ResourceNotReachableException e) {
-			throw new ResourceNotReachableException(e.getMessage(), e);
 		} catch (Exception e) {
-			this.handleFailedLogin(e);
 			this.requestStateHandler.pushError(endpoint, e);
 			this.logger.error(String.format(Constant.FETCH_DATA_FAILED, endpoint, responseClassName), e);
 			return null;
-		}
-	}
-
-	/**
-	 * Checks if the given exception indicates a failed login.
-	 * Throws {@link FailedLoginException} if the exception is already of that type,
-	 * or if it is a {@link CommandFailureException} with status 400 or a message
-	 * containing {@link Constant#REFRESH_TOKEN_INVALID_MESSAGE}.
-	 *
-	 * @param e the exception to analyze
-	 * @throws FailedLoginException if the exception represents a failed login
-	 */
-	private void handleFailedLogin(Exception e) throws FailedLoginException {
-		if (e instanceof FailedLoginException) {
-			throw new FailedLoginException(e.getMessage());
-		}
-		if (e instanceof CommandFailureException) {
-			boolean isBadRequest = ((CommandFailureException) e).getStatusCode() == HttpStatus.BAD_REQUEST.value();
-			boolean isInvalidRefreshToken = e.getMessage().contains(Constant.REFRESH_TOKEN_INVALID_MESSAGE);
-			if (isBadRequest && isInvalidRefreshToken) {
-				throw new FailedLoginException(e.getMessage());
-			}
 		}
 	}
 }
