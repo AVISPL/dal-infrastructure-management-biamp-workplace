@@ -56,6 +56,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.R
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.WorkplaceProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.util.StringUtils;
@@ -194,6 +195,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				statistics.putAll(this.getOverviewProperties(device));
 				statistics.putAll(this.getFirmwareProperties(device));
 				statistics.putAll(this.getStatusProperties(device));
+				statistics.putAll(this.getWorkplaceProperties(device));
 
 				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers(device);
 				Optional.of(controllableProperties).filter(List::isEmpty).ifPresent(l -> l.add(Constant.DUMMY_CONTROLLER));
@@ -442,6 +444,24 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				StatusProperty.values(),
 				Constant.STATUS_GROUP,
 				property -> MonitoringUtil.mapToStatusProperty(device, property)
+		);
+	}
+
+	/**
+	 * Generates workplace properties for an aggregated device.
+	 * <p>
+	 * This method uses {@link MonitoringUtil} to map each {@link WorkplaceProperty}
+	 * to its corresponding value from the provided {@link Device}.
+	 * </p>
+	 *
+	 * @param device the device for which workplace properties are generated; must not be {@code null}
+	 * @return a map of workplace property keys and values for the specified device
+	 */
+	private Map<String, String> getWorkplaceProperties(Device device) {
+		return MonitoringUtil.generateProperties(
+				WorkplaceProperty.values(),
+				Constant.WORKPLACE_GROUP,
+				property -> MonitoringUtil.mapToWorkplaceProperty(device, property)
 		);
 	}
 
