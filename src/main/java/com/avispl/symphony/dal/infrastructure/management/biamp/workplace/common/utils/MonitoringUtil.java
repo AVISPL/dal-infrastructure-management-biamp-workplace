@@ -31,6 +31,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Status;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Type;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Organization;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Profile;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.DeviceState;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
@@ -38,6 +39,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.a
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.WorkplaceProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.ProfileProperty;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
@@ -135,6 +137,35 @@ public class MonitoringUtil {
 				return organization.getMembershipRole().getValue();
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOrganizationProperty()", property));
+				return null;
+		}
+	}
+
+	/**
+	 * Maps an {@link Profile} instance to a string value based on the given {@link ProfileProperty}.
+	 *
+	 * @param profile the profile to extract values from; may be {@code null}
+	 * @param property the property to map
+	 * @return a string value of the requested property, or {@code null} if the profile
+	 * is {@code null} or the property is not supported
+	 */
+	public static String mapToProfileProperty(Profile profile, ProfileProperty property) {
+		if (profile == null) {
+			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Profile"));
+			return null;
+		}
+
+		switch (property) {
+			case ID:
+				return mapToValue(profile.getId());
+			case NAME:
+				return mapToValue(profile.getName());
+			case EMAIL:
+				return mapToValue(profile.getEmail());
+			case SUPER_ADMIN:
+				return mapToValue(profile.getSuperAdmin());
+			default:
+				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToProfileProperty()", property));
 				return null;
 		}
 	}

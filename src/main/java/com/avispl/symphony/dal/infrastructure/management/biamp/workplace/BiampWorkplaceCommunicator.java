@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.security.auth.login.FailedLoginException;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 
 import com.avispl.symphony.api.dal.control.Controller;
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
@@ -59,6 +60,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.a
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.WorkplaceProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.ProfileProperty;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
@@ -104,6 +106,9 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	/** The list of devices from all associated {@link #organizations}. */
 	private final List<Device> devices;
 
+	/** The property used to filter the aggregated devices by organizationId(s) */
+	private List<String> organizationIds;
+
 	public BiampWorkplaceCommunicator() {
 		this.reentrantLock = new ReentrantLock();
 		this.versionProperties = new Properties();
@@ -118,6 +123,32 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.profile = new Profile();
 		this.organizations = new ArrayList<>();
 		this.devices = Collections.synchronizedList(new ArrayList<>());
+
+		this.organizationIds = new ArrayList<>();
+	}
+
+	/**
+	 * Retrieves {@link #organizationIds}
+	 *
+	 * @return value of {@link #organizationIds}
+	 */
+	public String getOrganizationIds() {
+		return String.join(Constant.COMMA, this.organizationIds);
+	}
+
+	/**
+	 * Sets {@link #organizationIds} value
+	 *
+	 * @param organizationIds new value of {@link #organizationIds}
+	 */
+	public void setOrganizationIds(String organizationIds) {
+		this.organizationIds.clear();
+		if (StringUtils.isNullOrEmpty(organizationIds)) {
+			return;
+		}
+		Arrays.stream(organizationIds.split(Constant.COMMA)).map(String::trim)
+				.filter(organizationId -> !organizationId.isEmpty())
+				.forEach(organizationId -> this.organizationIds.add(organizationId));
 	}
 
 	/**
@@ -170,8 +201,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			Map<String, String> statistics = new HashMap<>();
 			statistics.putAll(this.getGeneralProperties());
 			statistics.putAll(this.getOrganizationProperties());
+			statistics.putAll(this.getProfileProperties());
 
 			extendedStatistics.setStatistics(statistics);
+			extendedStatistics.setDynamicStatistics(this.getDynamicStatistics(statistics));
 			this.localExtendedStatistics = extendedStatistics;
 		} finally {
 			this.reentrantLock.unlock();
@@ -204,6 +237,11 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				aggregatedDevice.setControllableProperties(controllableProperties);
 				aggregatedDevices.add(aggregatedDevice);
 			});
+		}
+		//	Filter by organization id(s)
+		if (CollectionUtils.isNotEmpty(this.organizationIds)) {
+			String organizationName = String.format(Constant.PROPERTY_FORMAT, Constant.WORKPLACE_GROUP, WorkplaceProperty.ORGANIZATION_ID.getName());
+			aggregatedDevices.removeIf(aggregatedDevice -> !this.organizationIds.contains(aggregatedDevice.getProperties().get(organizationName)));
 		}
 		this.localAggregatedDevices = aggregatedDevices;
 		this.versionProperties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), String.valueOf(this.lastMonitoringCycleDuration));
@@ -258,6 +296,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	@Override
 	protected void internalDestroy() {
 		this.logger.info(Constant.DESTROY_INTERNAL_INFO + this.getClass().getSimpleName());
+
+		this.organizationIds = null;
 
 		this.devices.clear();
 		this.organizations = null;
@@ -329,6 +369,11 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 					this.devices.addAll(fetchedDevices);
 				}
 			}
+			//	Update the this.organizationIds
+			if (Boolean.FALSE.equals(this.profile.getSuperAdmin())
+					&& CollectionUtils.isNotEmpty(this.organizationIds) && this.organizationIds.size() > 1) {
+				this.organizationIds.subList(1, this.organizationIds.size()).clear();
+			}
 		}
 
 		this.requestStateHandler.verifyRequestState();
@@ -367,6 +412,20 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	}
 
 	/**
+	 * Retrieves profile properties for the aggregator.
+	 * <p>Uses {@link MonitoringUtil#mapToProfileProperty(Profile, ProfileProperty)} to map each property.</p>
+	 *
+	 * @return a map of profile property names and their corresponding values
+	 */
+	private Map<String, String> getProfileProperties() {
+		return MonitoringUtil.generateProperties(
+				ProfileProperty.values(),
+				Constant.PROFILE_GROUP,
+				property -> MonitoringUtil.mapToProfileProperty(this.profile, property)
+		);
+	}
+
+	/**
 	 * Generates monitoring properties for all available organizations.
 	 * <p>
 	 * Each organization is assigned a group name based on its index and
@@ -391,6 +450,33 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		}
 
 		return properties;
+	}
+
+	/**
+	 * Returns dynamic statistics for the aggregator.
+	 * <p>
+	 * If the input map is empty, logs a warning and returns an empty map.
+	 * Otherwise, builds a map of {@code DEFAULT_GRAPHS} with values from
+	 * {@code statistics}, or {@link Constant#NOT_AVAILABLE} if missing.
+	 * </p>
+	 *
+	 * @param statistics the input statistics
+	 * @return a map of default graphs and their values, or an empty map if none
+	 */
+	private Map<String, String> getDynamicStatistics(Map<String, String> statistics) {
+		if (MapUtils.isEmpty(statistics)) {
+			this.logger.warn(Constant.STATISTICS_EMPTY_WARNING);
+			return Collections.emptyMap();
+		}
+
+		Map<String, String> dynamicStatistic = new HashMap<>();
+		DEFAULT_GRAPH_PROPERTIES.forEach(defaultGraph -> {
+			String statisticValue = Optional.ofNullable(statistics.get(defaultGraph)).orElse(Constant.NOT_AVAILABLE);
+
+			dynamicStatistic.put(defaultGraph, statisticValue);
+		});
+
+		return dynamicStatistic;
 	}
 
 	/**

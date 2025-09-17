@@ -6,21 +6,20 @@ package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.bases.BaseProperty;
 
 /**
- *
+ * Represents profile properties of an aggregator device.
  *
  * @author Kevin / Symphony Dev Team
  * @since 1.0.0
  */
-public enum OrganizationProperty implements BaseProperty {
+public enum ProfileProperty implements BaseProperty {
 	ID("ID"),
-	INVITATION_STATUS("InvitationStatus"),
-	MEMBERSHIP_STATUS("MembershipStatus"),
 	NAME("Name"),
-	ROLE("Role");
+	EMAIL("Email"),
+	SUPER_ADMIN("SuperAdmin");
 
 	private final String name;
 
-	OrganizationProperty(String name) {
+	ProfileProperty(String name) {
 		this.name = name;
 	}
 

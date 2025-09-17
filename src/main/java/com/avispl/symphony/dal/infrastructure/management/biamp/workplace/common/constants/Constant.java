@@ -27,6 +27,7 @@ public class Constant {
 
 	//	Groups
 	public static final String ORGANIZATION_GROUPS = "Organization";
+	public static final String PROFILE_GROUP = "Profile";
 	public static final String FIRMWARE_GROUP = "Firmware";
 	public static final String STATUS_GROUP = "Status";
 	public static final String WORKPLACE_GROUP = "Workplace";
@@ -50,6 +51,7 @@ public class Constant {
 	public static final String OBJECT_NULL_WARNING = "%s object is null, returning null value.";
 	public static final String UNSUPPORTED_PROPERTY_WARNING = "Unsupported %s with property %s.";
 	public static final String CONTROLLABLE_PROPS_EMPTY_WARNING = "ControllableProperties list is null or empty, skipping control operation";
+	public static final String STATISTICS_EMPTY_WARNING = "The statistics are empty, returning empty map.";
 
 	//	Fail messages
 	public static final String REQUEST_APIS_FAILED = "Unable to process requested API sections: [%s], error reported: [%s]";

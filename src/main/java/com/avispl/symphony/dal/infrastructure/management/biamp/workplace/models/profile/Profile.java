@@ -19,6 +19,7 @@ public class Profile {
 	private String id;
 	private String name;
 	private String email;
+	private Boolean superAdmin;
 	private List<Membership> memberships;
 	private List<Invitation> invitations;
 
@@ -60,6 +61,24 @@ public class Profile {
 	 */
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	/**
+	 * Retrieves {@link #superAdmin}
+	 *
+	 * @return value of {@link #superAdmin}
+	 */
+	public Boolean getSuperAdmin() {
+		return superAdmin;
+	}
+
+	/**
+	 * Sets {@link #superAdmin} value
+	 *
+	 * @param superAdmin new value of {@link #superAdmin}
+	 */
+	public void setSuperAdmin(Boolean superAdmin) {
+		this.superAdmin = superAdmin;
 	}
 
 	/**
