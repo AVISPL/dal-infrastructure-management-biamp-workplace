@@ -60,12 +60,13 @@ class BiampWorkplaceCommunicatorTest {
 
 	@Test
 	void testRetrieveMultipleStatistics() throws Exception {
+		this.communicator.setHistoricalProperties("Status#Temperature(C), Status#CPUUtilization(%)");
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		this.communicator.retrieveMultipleStatistics();
-		Util.delayExecution(10000);
+		Util.delayExecution(5000);
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		this.communicator.retrieveMultipleStatistics();
-		Util.delayExecution(10000);
+		Util.delayExecution(5000);
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		List<AggregatedDevice> aggregatedDevices = this.communicator.retrieveMultipleStatistics();
 

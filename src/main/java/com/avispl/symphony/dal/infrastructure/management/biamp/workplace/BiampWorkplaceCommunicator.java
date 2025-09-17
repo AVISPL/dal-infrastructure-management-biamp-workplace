@@ -75,6 +75,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getName(),
 			GeneralProperty.MONITORED_DEVICES_TOTAL.getName()
 	));
+	private static final Set<String> AGGREGATED_HISTORICAL_PROPERTIES = new HashSet<>(Arrays.asList(
+			String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.TEMPERATURE.getName()),
+			String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.CPU_UTILIZATION.getName())
+	));
 
 	/** Lock for thread-safe operations. */
 	private final ReentrantLock reentrantLock;
@@ -108,6 +112,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	/** The property used to filter the aggregated devices by organizationId(s) */
 	private List<String> organizationIds;
+	/** The properties used to display historical graphs for an aggregated device */
+	private List<String> historicalProperties;
 
 	public BiampWorkplaceCommunicator() {
 		this.reentrantLock = new ReentrantLock();
@@ -125,6 +131,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.devices = Collections.synchronizedList(new ArrayList<>());
 
 		this.organizationIds = new ArrayList<>();
+		this.historicalProperties = new ArrayList<>();
 	}
 
 	/**
@@ -149,6 +156,30 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		Arrays.stream(organizationIds.split(Constant.COMMA)).map(String::trim)
 				.filter(organizationId -> !organizationId.isEmpty())
 				.forEach(organizationId -> this.organizationIds.add(organizationId));
+	}
+
+	/**
+	 * Retrieves {@link #historicalProperties}
+	 *
+	 * @return value of {@link #historicalProperties}
+	 */
+	public String getHistoricalProperties() {
+		return String.join(Constant.COMMA, this.historicalProperties);
+	}
+
+	/**
+	 * Sets {@link #historicalProperties} value
+	 *
+	 * @param historicalProperties new value of {@link #historicalProperties}
+	 */
+	public void setHistoricalProperties(String historicalProperties) {
+		this.historicalProperties.clear();
+		if (StringUtils.isNullOrEmpty(historicalProperties)) {
+			return;
+		}
+		Arrays.stream(historicalProperties.split(Constant.COMMA)).map(String::trim)
+				.filter(historicalProperty -> !historicalProperty.isEmpty())
+				.forEach(historicalProperty -> this.historicalProperties.add(historicalProperty));
 	}
 
 	/**
@@ -223,6 +254,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				aggregatedDevice.setDeviceName(MonitoringUtil.mapToDeviceName(device));
 				aggregatedDevice.setDeviceOnline(Util.isDeviceOnline(device.getState()));
 				aggregatedDevice.setSerialNumber(device.getSerial());
+				aggregatedDevice.setTimestamp(System.currentTimeMillis());
 
 				Map<String, String> statistics = new HashMap<>();
 				statistics.putAll(this.getOverviewProperties(device));
@@ -235,6 +267,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 				aggregatedDevice.setProperties(statistics);
 				aggregatedDevice.setControllableProperties(controllableProperties);
+				aggregatedDevice.setDynamicStatistics(this.getRealtimeStatistics(statistics));
 				aggregatedDevices.add(aggregatedDevice);
 			});
 		}
@@ -297,6 +330,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	protected void internalDestroy() {
 		this.logger.info(Constant.DESTROY_INTERNAL_INFO + this.getClass().getSimpleName());
 
+		this.historicalProperties = null;
 		this.organizationIds = null;
 
 		this.devices.clear();
@@ -549,6 +583,38 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				Constant.WORKPLACE_GROUP,
 				property -> MonitoringUtil.mapToWorkplaceProperty(device, property)
 		);
+	}
+
+	/**
+	 * Returns dynamic statistics for the aggregated device.
+	 * <p>
+	 * If the input map is empty, logs a warning and returns an empty map.
+	 * Otherwise, builds a map of {@link #AGGREGATED_HISTORICAL_PROPERTIES} with values from
+	 * {@code statistics}, or {@link Constant#NOT_AVAILABLE} if missing.
+	 * </p>
+	 *
+	 * @param aggregatedStatistics the input statistics of aggregated device
+	 * @return a map of historical graphs and their values, or an empty map if none
+	 */
+	private Map<String, String> getRealtimeStatistics(Map<String, String> aggregatedStatistics) {
+		if (MapUtils.isEmpty(aggregatedStatistics)) {
+			this.logger.warn(Constant.AGGREGATED_STATISTICS_EMPTY_WARNING);
+			return Collections.emptyMap();
+		}
+		if (CollectionUtils.isEmpty(this.historicalProperties)) {
+			this.logger.warn(Constant.HISTORICAL_PROPERTIES_EMPTY_WARNING);
+			return Collections.emptyMap();
+		}
+
+		Map<String, String> dynamicStatistic = new HashMap<>();
+		this.historicalProperties.forEach(historicalProperty -> {
+			if (AGGREGATED_HISTORICAL_PROPERTIES.contains(historicalProperty)) {
+				String statisticValue = Optional.ofNullable(aggregatedStatistics.get(historicalProperty)).orElse(Constant.NOT_AVAILABLE);
+				dynamicStatistic.put(historicalProperty, statisticValue);
+			}
+		});
+
+		return dynamicStatistic;
 	}
 
 	/**

@@ -52,6 +52,8 @@ public class Constant {
 	public static final String UNSUPPORTED_PROPERTY_WARNING = "Unsupported %s with property %s.";
 	public static final String CONTROLLABLE_PROPS_EMPTY_WARNING = "ControllableProperties list is null or empty, skipping control operation";
 	public static final String STATISTICS_EMPTY_WARNING = "The statistics are empty, returning empty map.";
+	public static final String AGGREGATED_STATISTICS_EMPTY_WARNING = "The aggregated statistics are empty, returning empty map.";
+	public static final String HISTORICAL_PROPERTIES_EMPTY_WARNING = "The historical properties are empty, returning empty map.";
 
 	//	Fail messages
 	public static final String REQUEST_APIS_FAILED = "Unable to process requested API sections: [%s], error reported: [%s]";
