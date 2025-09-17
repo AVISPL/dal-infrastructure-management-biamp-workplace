@@ -4,6 +4,7 @@
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -71,14 +72,18 @@ import com.avispl.symphony.dal.util.StringUtils;
  * @since 1.0.0
  */
 public class BiampWorkplaceCommunicator extends RestCommunicator implements Monitorable, Controller, Aggregator {
+	/** Default graph properties used for the aggregator. */
 	private static final Set<String> DEFAULT_GRAPH_PROPERTIES = new HashSet<>(Arrays.asList(
 			GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getName(),
 			GeneralProperty.MONITORED_DEVICES_TOTAL.getName()
 	));
+	/** Historical properties of aggregated devices for graphing. */
 	private static final Set<String> AGGREGATED_HISTORICAL_PROPERTIES = new HashSet<>(Arrays.asList(
 			String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.TEMPERATURE.getName()),
 			String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.CPU_UTILIZATION.getName())
 	));
+	/** Reboot duration (ms) of an aggregated device. */
+	private static final long REBOOT_AGGREGATED_TIME = Duration.ofMinutes(4).toMillis();
 
 	/** Lock for thread-safe operations. */
 	private final ReentrantLock reentrantLock;
@@ -630,7 +635,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
 		if (Util.isDeviceOnline(device.getState())) {
 			controllableProperties.add(ControllerUtil.generateControllableButton(
-					OverviewProperty.REBOOT.getName(), OverviewProperty.REBOOT.getName(), "Rebooting", 0L
+					OverviewProperty.REBOOT.getName(), OverviewProperty.REBOOT.getName(), "Rebooting", REBOOT_AGGREGATED_TIME
 			));
 		}
 
