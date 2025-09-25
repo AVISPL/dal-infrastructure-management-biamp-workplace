@@ -22,12 +22,10 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.bases.B
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Attributes;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Channel;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Desk;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Device;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Firmware;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Place;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Place.Hierarchy;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Room;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Status;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.device.Type;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.profile.Organization;
@@ -36,10 +34,9 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.D
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.WorkplaceProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.ProfileProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.UserProfileProperty;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
@@ -133,7 +130,7 @@ public class MonitoringUtil {
 				return organization.getMembershipStatus().getValue();
 			case NAME:
 				return mapToValue(organization.getName());
-			case ROLE:
+			case USER_ROLE:
 				return organization.getMembershipRole().getValue();
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOrganizationProperty()", property));
@@ -142,14 +139,14 @@ public class MonitoringUtil {
 	}
 
 	/**
-	 * Maps an {@link Profile} instance to a string value based on the given {@link ProfileProperty}.
+	 * Maps an {@link Profile} instance to a string value based on the given {@link UserProfileProperty}.
 	 *
 	 * @param profile the profile to extract values from; may be {@code null}
 	 * @param property the property to map
 	 * @return a string value of the requested property, or {@code null} if the profile
 	 * is {@code null} or the property is not supported
 	 */
-	public static String mapToProfileProperty(Profile profile, ProfileProperty property) {
+	public static String mapToProfileProperty(Profile profile, UserProfileProperty property) {
 		if (profile == null) {
 			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Profile"));
 			return null;
@@ -162,7 +159,7 @@ public class MonitoringUtil {
 				return mapToValue(profile.getName());
 			case EMAIL:
 				return mapToValue(profile.getEmail());
-			case SUPER_ADMIN:
+			case IS_SUPER_ADMIN:
 				return mapToValue(profile.getSuperAdmin());
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToProfileProperty()", property));
@@ -220,16 +217,30 @@ public class MonitoringUtil {
 			return null;
 		}
 
+		Place location = Optional.ofNullable(device.getPlace()).orElseGet(Place::new);
+		List<Hierarchy> locationHierarchies = Optional.ofNullable(location.getHierarchy()).orElseGet(Collections::emptyList);
+
 		switch (property) {
 			case MODEL:
 				return removeAccents(mapToValue(getDeviceAttributes(device).getProductModel()));
 			case REBOOT:
-				return Util.isDeviceOnline(device.getState()) ? Constant.NOT_AVAILABLE : Constant.REBOOT;
+				return Constant.NOT_AVAILABLE;
 			case STATE:
 				DeviceState state = Optional.ofNullable(device.getState()).orElse(DeviceState.NOT_AVAILABLE);
 				return state.getValue();
 			case TYPE:
 				return removeAccents(mapToValue(getDeviceType(device).getName()));
+			case LOCATION_ID:
+				return mapToValue(location.getId());
+			case LOCATION_NAME:
+				Collections.reverse(locationHierarchies);
+				String locationName = locationHierarchies.stream()
+						.map(hierarchy -> hierarchy.getName().trim()).collect(Collectors.joining(" / "));
+				return mapToValue(locationName);
+			case ORGANIZATION_ID:
+				return mapToValue(device.getOrgId());
+			case ORGANIZATION_NAME:
+				return mapToValue(device.getOrgName());
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToOverviewProperty()", property));
 				return null;
@@ -264,50 +275,6 @@ public class MonitoringUtil {
 				return mapToValue(status.getTimestamp());
 			default:
 				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToStatusProperty()", property));
-				return null;
-		}
-	}
-
-	/**
-	 * Maps a {@link Device} instance to a string value based on the given {@link WorkplaceProperty}.
-	 *
-	 * @param device the device to extract values from; may be {@code null}
-	 * @param property the property to map
-	 * @return a string value of the requested property, or {@code null} if the device or its workplace is {@code null}
-	 * or the property is not supported
-	 */
-	public static String mapToWorkplaceProperty(Device device, WorkplaceProperty property) {
-		if (device == null) {
-			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "Device"));
-			return null;
-		}
-		Desk desk = Optional.ofNullable(device.getDesk()).orElseGet(Desk::new);
-		Place location = Optional.ofNullable(device.getPlace()).orElseGet(Place::new);
-		List<Hierarchy> locationHierarchies = Optional.ofNullable(location.getHierarchy()).orElseGet(Collections::emptyList);
-		Room room = Optional.ofNullable(device.getRoom()).orElseGet(Room::new);
-
-		switch (property) {
-			case DESK_ID:
-				return mapToValue(desk.getId());
-			case DESK_NAME:
-				return mapToValue(desk.getName());
-			case LOCATION_ID:
-				return mapToValue(location.getId());
-			case LOCATION_NAME:
-				Collections.reverse(locationHierarchies);
-				String locationName = locationHierarchies.stream()
-						.map(hierarchy -> hierarchy.getName().trim()).collect(Collectors.joining(" / "));
-				return mapToValue(locationName);
-			case ORGANIZATION_ID:
-				return mapToValue(device.getOrgId());
-			case ORGANIZATION_NAME:
-				return mapToValue(device.getOrgName());
-			case ROOM_ID:
-				return mapToValue(room.getId());
-			case ROOM_NAME:
-				return mapToValue(room.getName());
-			default:
-				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToWorkplaceProperty()", property));
 				return null;
 		}
 	}

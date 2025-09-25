@@ -16,8 +16,8 @@ public enum MembershipRole {
 	NOT_AVAILABLE(Constant.NOT_AVAILABLE),
 	UNSPECIFIED("Unspecified"),
 	OWNER("Owner"),
-	ORG_ADMIN("OrgAdmin"),
-	DESK_ADMIN("DeskAdmin"),
+	ORG_ADMIN("Org Admin"),
+	DESK_ADMIN("Desk Admin"),
 	USER("User");
 
 	private final String value;

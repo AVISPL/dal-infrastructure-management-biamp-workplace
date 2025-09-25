@@ -100,13 +100,12 @@ public enum ResponseType {
 	public JsonNode getPaths(JsonNode root) {
 		switch (this) {
 			case PROFILE:
+			case REBOOT_DEVICE:
 				return root.path(ApiConstant.DATA_FIELD).path(this.fieldName);
 			case DEVICES:
 				return root.path(ApiConstant.DATA_FIELD).path("allDevices").path(this.fieldName);
 			case NEXT_FIRMWARE:
 				return root.path(ApiConstant.DATA_FIELD).path("device").path(this.fieldName);
-			case REBOOT_DEVICE:
-				return root.path(ApiConstant.DATA_FIELD);
 			default:
 				return root;
 		}

@@ -148,9 +148,9 @@ public class GraphQLReq {
 	 * @return a {@link GraphQLReq} containing the reboot device query and variables
 	 */
 	public static GraphQLReq rebootDevice(String orgId, String deviceId) {
-		String query = Util.readQueryFromGraphQLFile(ResponseType.REBOOT_DEVICE.getFieldName());
+		String query = Util.readQueryFromGraphQLFile("rebootDevice");
 		Map<String, Object> variables = new HashMap<>();
-		variables.put("orgId,", orgId);
+		variables.put("orgId", orgId);
 		variables.put("deviceId", deviceId);
 
 		return new GraphQLReq(query, variables);

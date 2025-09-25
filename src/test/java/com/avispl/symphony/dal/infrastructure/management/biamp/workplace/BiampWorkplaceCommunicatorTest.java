@@ -14,9 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
+import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.Util;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 
 /**
  * Unit tests for the {@link BiampWorkplaceCommunicator} class.
@@ -79,6 +82,20 @@ class BiampWorkplaceCommunicatorTest {
 			this.verifyStatistics(dynamicStatistics);
 			controllableProperties.forEach(Assertions::assertNotNull);
 		});
+	}
+
+	@Test
+	void testRebootForAggregatedDevice() throws Exception {
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		ControllableProperty controllableProperty = new ControllableProperty(
+				OverviewProperty.REBOOT.getName(),
+				Constant.NOT_AVAILABLE,
+				"60643bb4-89e5-4e21-b0d3-a169d6d037f9"
+		);
+		this.communicator.controlProperty(controllableProperty);
+		Util.delayExecution(1000);
+		Exception exception = Assertions.assertThrows(IllegalStateException.class, () -> this.communicator.controlProperty(controllableProperty));
+		Assertions.assertEquals("target device is offline", exception.getMessage());
 	}
 
 	private void verifyStatistics(Map<String, String> statistics) {

@@ -27,10 +27,9 @@ public class Constant {
 
 	//	Groups
 	public static final String ORGANIZATION_GROUPS = "Organization";
-	public static final String PROFILE_GROUP = "Profile";
+	public static final String USER_PROFILE_GROUP = "UserProfile";
 	public static final String FIRMWARE_GROUP = "Firmware";
 	public static final String STATUS_GROUP = "Status";
-	public static final String WORKPLACE_GROUP = "Workplace";
 
 	//	Values
 	public static final String NOT_AVAILABLE = "N/A";
@@ -66,5 +65,5 @@ public class Constant {
 	public static final String MAP_TO_UPTIME_MIN_FAILED = "Failed to mapToUptimeMin with uptime: ";
 	public static final String FETCH_AGGREGATED_DATA_FAILED = "Failed to fetch aggregated data for device id: %s";
 	public static final String DETERMINE_DEVICE_FAILED = "Unable to determine the device to control with ID: ";
-	public static final String REBOOT_DEVICE_FAILED = "Unable to reboot device. Verify device state and try again.";
+	public static final String REBOOT_DEVICE_FAILED = "Request to reboot the device failed.";
 }

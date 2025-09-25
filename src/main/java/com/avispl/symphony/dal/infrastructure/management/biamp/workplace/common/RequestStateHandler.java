@@ -7,8 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.http.HttpStatus;
-
 import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.error.CommandFailureException;
@@ -48,8 +46,7 @@ public class RequestStateHandler {
 	 * <ul>
 	 *   <li>{@link ResourceNotReachableException} – it is rethrown as a new {@code ResourceNotReachableException}.</li>
 	 *   <li>{@link FailedLoginException} – it is rethrown as a new {@code FailedLoginException}.</li>
-	 *   <li>{@link CommandFailureException} – if it has status code {@code 400 BAD_REQUEST} and contains
-	 *       {@link Constant#REFRESH_TOKEN_INVALID_MESSAGE}, it is rethrown as a {@code FailedLoginException}.</li>
+	 *   <li>{@link CommandFailureException} – if it contains {@link Constant#REFRESH_TOKEN_INVALID_MESSAGE}, it is rethrown as a {@code FailedLoginException}.</li>
 	 * </ul>
 	 * Otherwise, the error is added to {@link #apiErrors} under the given {@code apiSection}.
 	 *
@@ -62,15 +59,9 @@ public class RequestStateHandler {
 		if (error instanceof ResourceNotReachableException) {
 			throw new ResourceNotReachableException(error.getMessage(), error);
 		}
-		if (error instanceof FailedLoginException) {
+		boolean invalidRefreshToken = error instanceof CommandFailureException && error.getMessage().contains(Constant.REFRESH_TOKEN_INVALID_MESSAGE);
+		if (error instanceof FailedLoginException || invalidRefreshToken) {
 			throw new FailedLoginException(error.getMessage());
-		}
-		if (error instanceof CommandFailureException) {
-			boolean isBadRequest = ((CommandFailureException) error).getStatusCode() == HttpStatus.BAD_REQUEST.value();
-			boolean isInvalidRefreshToken = error.getMessage().contains(Constant.REFRESH_TOKEN_INVALID_MESSAGE);
-			if (isBadRequest && isInvalidRefreshToken) {
-				throw new FailedLoginException(error.getMessage());
-			}
 		}
 
 		this.apiErrors.put(apiSection, error);

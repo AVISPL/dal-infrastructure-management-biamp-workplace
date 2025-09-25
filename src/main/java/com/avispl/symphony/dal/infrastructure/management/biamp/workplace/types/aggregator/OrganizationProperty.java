@@ -16,7 +16,7 @@ public enum OrganizationProperty implements BaseProperty {
 	INVITATION_STATUS("InvitationStatus"),
 	MEMBERSHIP_STATUS("MembershipStatus"),
 	NAME("Name"),
-	ROLE("Role");
+	USER_ROLE("UserRole");
 
 	private final String name;
 

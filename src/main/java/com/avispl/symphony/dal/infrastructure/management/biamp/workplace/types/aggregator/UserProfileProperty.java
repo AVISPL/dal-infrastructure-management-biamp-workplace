@@ -11,15 +11,15 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.bases.B
  * @author Kevin / Symphony Dev Team
  * @since 1.0.0
  */
-public enum ProfileProperty implements BaseProperty {
+public enum UserProfileProperty implements BaseProperty {
 	ID("ID"),
 	NAME("Name"),
 	EMAIL("Email"),
-	SUPER_ADMIN("SuperAdmin");
+	IS_SUPER_ADMIN("IsSuperAdmin");
 
 	private final String name;
 
-	ProfileProperty(String name) {
+	UserProfileProperty(String name) {
 		this.name = name;
 	}
 

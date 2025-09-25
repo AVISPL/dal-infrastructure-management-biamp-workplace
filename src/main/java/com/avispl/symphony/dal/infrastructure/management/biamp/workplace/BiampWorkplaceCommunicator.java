@@ -58,10 +58,9 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.R
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.WorkplaceProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.ProfileProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.UserProfileProperty;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
@@ -265,9 +264,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				statistics.putAll(this.getOverviewProperties(device));
 				statistics.putAll(this.getFirmwareProperties(device));
 				statistics.putAll(this.getStatusProperties(device));
-				statistics.putAll(this.getWorkplaceProperties(device));
 
-				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers(device);
+				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers();
 				Optional.of(controllableProperties).filter(List::isEmpty).ifPresent(l -> l.add(Constant.DUMMY_CONTROLLER));
 
 				aggregatedDevice.setProperties(statistics);
@@ -278,7 +276,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		}
 		//	Filter by organization id(s)
 		if (CollectionUtils.isNotEmpty(this.organizationIds)) {
-			String organizationName = String.format(Constant.PROPERTY_FORMAT, Constant.WORKPLACE_GROUP, WorkplaceProperty.ORGANIZATION_ID.getName());
+			String organizationName = OverviewProperty.ORGANIZATION_ID.getName();
 			aggregatedDevices.removeIf(aggregatedDevice -> !this.organizationIds.contains(aggregatedDevice.getProperties().get(organizationName)));
 		}
 		this.localAggregatedDevices = aggregatedDevices;
@@ -305,11 +303,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				GraphQLReq query = GraphQLReq.rebootDevice(device.getOrgId(), device.getId());
 				DeviceCommand response = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, query, ResponseType.REBOOT_DEVICE);
 
-				if (response == null) {
+				if (response == null || !response.isSuccess()) {
 					throw new IllegalStateException(Constant.REBOOT_DEVICE_FAILED);
-				}
-				if (!response.isSuccess()) {
-					throw new IllegalStateException(Optional.ofNullable(response.getErrorMessage()).orElse(Constant.REBOOT_DEVICE_FAILED));
 				}
 				this.disconnect();
 			}
@@ -384,8 +379,9 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 		if (this.authentication.isInvalid()) {
 			this.logger.info(Constant.REFRESHING_TOKENS_INFO);
-			AuthenticationReq requestBody = new AuthenticationReq(this.getLogin(), this.authentication.getRefreshToken());
-			this.authentication = this.sendRequest(ApiConstant.GET_TOKEN_ENDPOINT, requestBody.toFormData(), ResponseType.AUTHENTICATION);
+			AuthenticationReq authRequest = new AuthenticationReq(this.getLogin(), this.authentication.getRefreshToken());
+			Authentication authResponse = this.sendRequest(ApiConstant.GET_TOKEN_ENDPOINT, authRequest.toFormData(), ResponseType.AUTHENTICATION);
+			this.authentication = Optional.ofNullable(authResponse).orElse(new Authentication());
 		}
 		this.profile = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, GraphQLReq.getProfile(), ResponseType.PROFILE);
 		if (this.profile != null && CollectionUtils.isNotEmpty(this.profile.getMemberships())) {
@@ -452,14 +448,14 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	/**
 	 * Retrieves profile properties for the aggregator.
-	 * <p>Uses {@link MonitoringUtil#mapToProfileProperty(Profile, ProfileProperty)} to map each property.</p>
+	 * <p>Uses {@link MonitoringUtil#mapToProfileProperty(Profile, UserProfileProperty)} to map each property.</p>
 	 *
 	 * @return a map of profile property names and their corresponding values
 	 */
 	private Map<String, String> getProfileProperties() {
 		return MonitoringUtil.generateProperties(
-				ProfileProperty.values(),
-				Constant.PROFILE_GROUP,
+				UserProfileProperty.values(),
+				Constant.USER_PROFILE_GROUP,
 				property -> MonitoringUtil.mapToProfileProperty(this.profile, property)
 		);
 	}
@@ -573,24 +569,6 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	}
 
 	/**
-	 * Generates workplace properties for an aggregated device.
-	 * <p>
-	 * This method uses {@link MonitoringUtil} to map each {@link WorkplaceProperty}
-	 * to its corresponding value from the provided {@link Device}.
-	 * </p>
-	 *
-	 * @param device the device for which workplace properties are generated; must not be {@code null}
-	 * @return a map of workplace property keys and values for the specified device
-	 */
-	private Map<String, String> getWorkplaceProperties(Device device) {
-		return MonitoringUtil.generateProperties(
-				WorkplaceProperty.values(),
-				Constant.WORKPLACE_GROUP,
-				property -> MonitoringUtil.mapToWorkplaceProperty(device, property)
-		);
-	}
-
-	/**
 	 * Returns dynamic statistics for the aggregated device.
 	 * <p>
 	 * If the input map is empty, logs a warning and returns an empty map.
@@ -631,13 +609,11 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	 *
 	 * @return a list of controllable properties for the device overview
 	 */
-	private List<AdvancedControllableProperty> getOverviewControllers(Device device) {
+	private List<AdvancedControllableProperty> getOverviewControllers() {
 		List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
-		if (Util.isDeviceOnline(device.getState())) {
-			controllableProperties.add(ControllerUtil.generateControllableButton(
-					OverviewProperty.REBOOT.getName(), OverviewProperty.REBOOT.getName(), "Rebooting", REBOOT_AGGREGATED_TIME
-			));
-		}
+		controllableProperties.add(ControllerUtil.generateControllableButton(
+				OverviewProperty.REBOOT.getName(), OverviewProperty.REBOOT.getName(), "Rebooting", REBOOT_AGGREGATED_TIME
+		));
 
 		return controllableProperties;
 	}

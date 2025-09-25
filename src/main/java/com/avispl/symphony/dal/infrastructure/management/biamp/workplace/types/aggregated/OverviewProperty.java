@@ -16,7 +16,11 @@ public enum OverviewProperty implements BaseProperty {
 	MODEL("Model"),
 	REBOOT(Constant.REBOOT),
 	STATE("State"),
-	TYPE("Type");
+	TYPE("Type"),
+	LOCATION_ID("LocationID"),
+	LOCATION_NAME("LocationName"),
+	ORGANIZATION_ID("OrganizationID"),
+	ORGANIZATION_NAME("OrganizationName");
 
 	private final String name;
 

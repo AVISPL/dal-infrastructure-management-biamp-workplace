@@ -14,7 +14,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.bases.B
 public enum FirmwareProperty implements BaseProperty {
 	ASSIGNED_FIRMWARE("AssignedFirmware"),
 	FIRMWARE("Firmware"),
-	FIRMWARE_CHANNEL("FirmwareChanel"),
+	FIRMWARE_CHANNEL("FirmwareChannel"),
 	LATEST_FIRMWARE("LatestFirmware"),
 	NEXT_FIRMWARE("NextFirmware");
 
