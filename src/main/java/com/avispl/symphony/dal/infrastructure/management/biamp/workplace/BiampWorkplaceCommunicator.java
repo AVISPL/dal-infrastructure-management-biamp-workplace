@@ -42,7 +42,6 @@ import com.avispl.symphony.dal.communicator.RestCommunicator;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.RequestStateHandler;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.ApiConstant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.ControllerUtil;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.MonitoringUtil;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.Util;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models.Authentication;
@@ -61,6 +60,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.a
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.UserProfileProperty;
+import com.avispl.symphony.dal.util.ControllablePropertyFactory;
 import com.avispl.symphony.dal.util.StringUtils;
 
 /**
@@ -118,6 +118,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private List<String> organizationIds;
 	/** The properties used to display historical graphs for an aggregated device */
 	private List<String> historicalProperties;
+	/** Indicates whether control properties are visible; defaults to false. */
+	private boolean configManagement;
 
 	public BiampWorkplaceCommunicator() {
 		this.reentrantLock = new ReentrantLock();
@@ -136,6 +138,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 		this.organizationIds = new ArrayList<>();
 		this.historicalProperties = new ArrayList<>();
+		this.configManagement = false;
 	}
 
 	/**
@@ -184,6 +187,24 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		Arrays.stream(historicalProperties.split(Constant.COMMA)).map(String::trim)
 				.filter(historicalProperty -> !historicalProperty.isEmpty())
 				.forEach(historicalProperty -> this.historicalProperties.add(historicalProperty));
+	}
+
+	/**
+	 * Retrieves {@link #configManagement}
+	 *
+	 * @return value of {@link #configManagement}
+	 */
+	public boolean isConfigManagement() {
+		return configManagement;
+	}
+
+	/**
+	 * Sets {@link #configManagement} value
+	 *
+	 * @param configManagement new value of {@link #configManagement}
+	 */
+	public void setConfigManagement(boolean configManagement) {
+		this.configManagement = configManagement;
 	}
 
 	/**
@@ -265,7 +286,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 				statistics.putAll(this.getFirmwareProperties(device));
 				statistics.putAll(this.getStatusProperties(device));
 
-				List<AdvancedControllableProperty> controllableProperties = this.getOverviewControllers();
+				List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
+				if (this.configManagement) {
+					controllableProperties.addAll(this.getOverviewControllers());
+				}
 				Optional.of(controllableProperties).filter(List::isEmpty).ifPresent(l -> l.add(Constant.DUMMY_CONTROLLER));
 
 				aggregatedDevice.setProperties(statistics);
@@ -611,7 +635,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	 */
 	private List<AdvancedControllableProperty> getOverviewControllers() {
 		List<AdvancedControllableProperty> controllableProperties = new ArrayList<>();
-		controllableProperties.add(ControllerUtil.generateControllableButton(
+		controllableProperties.add(ControllablePropertyFactory.createButton(
 				OverviewProperty.REBOOT.getName(), OverviewProperty.REBOOT.getName(), "Rebooting", REBOOT_AGGREGATED_TIME
 		));
 
