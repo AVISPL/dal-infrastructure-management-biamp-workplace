@@ -406,6 +406,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			AuthenticationReq authRequest = new AuthenticationReq(this.getLogin(), this.authentication.getRefreshToken());
 			Authentication authResponse = this.sendRequest(ApiConstant.GET_TOKEN_ENDPOINT, authRequest.toFormData(), ResponseType.AUTHENTICATION);
 			this.authentication = Optional.ofNullable(authResponse).orElse(new Authentication());
+			this.authentication.setIssuedAt(System.currentTimeMillis());
 		}
 		this.profile = this.sendRequest(ApiConstant.GRAPHQL_ENDPOINT, GraphQLReq.getProfile(), ResponseType.PROFILE);
 		if (this.profile != null && CollectionUtils.isNotEmpty(this.profile.getMemberships())) {

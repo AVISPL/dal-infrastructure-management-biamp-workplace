@@ -52,6 +52,11 @@ class BiampWorkplaceCommunicatorTest {
 	void testGetMultipleStatistics() throws Exception {
 		this.communicator.setOrganizationIds("7d188efc-9a08-4bc9-9b61-431c823db38b");
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		Util.delayExecution(10000);
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		Util.delayExecution(10000);
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		Util.delayExecution(10000);
 		Map<String, String> statistics = this.extendedStatistics.getStatistics();
 		List<AdvancedControllableProperty> controllableProperties = this.extendedStatistics.getControllableProperties();
 		Map<String, String> dynamicStatistics = this.extendedStatistics.getDynamicStatistics();

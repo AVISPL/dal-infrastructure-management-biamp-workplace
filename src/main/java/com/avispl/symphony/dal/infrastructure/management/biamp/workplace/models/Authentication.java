@@ -26,7 +26,7 @@ public class Authentication {
 	private Long expiresIn;
 
 	public Authentication() {
-		this.issuedAt = System.currentTimeMillis();
+		//	Default constructor required for JSON deserialization.
 	}
 
 	/**
@@ -102,22 +102,26 @@ public class Authentication {
 	}
 
 	/**
-	 * Checks whether this authentication response is invalid.
+	 * Determines whether the current authentication state is invalid.
 	 * <p>
-	 * An authentication is considered invalid if:
+	 * An authentication is considered <b>invalid</b> if any of the following conditions hold:
 	 * <ul>
-	 *   <li>Any of {@link #accessToken}, or {@link #refreshToken} is {@code null}</li>
+	 *   <li>{@link #accessToken} or {@link #refreshToken} is {@code null}</li>
 	 *   <li>{@link #issuedAt} or {@link #expiresIn} is {@code null}</li>
-	 *   <li>The token has expired, i.e. {@code issuedAt + expiresIn * 1000 <= current time}</li>
+	 *   <li>The token has expired, i.e. {@code issuedAt + (expiresIn * 1000L) < current time}</li>
 	 * </ul>
+	 * <p>
+	 * Otherwise, if all fields are present and the token has not yet expired,
+	 * the authentication is considered <b>valid</b>.
 	 *
-	 * @return {@code true} if the authentication is invalid, otherwise {@code false}
+	 * @return {@code true} if the authentication is invalid (missing tokens or expired),
+	 *         {@code false} if it is still valid
 	 */
 	public boolean isInvalid() {
 		boolean isAuthenticated = this.accessToken != null && this.refreshToken != null;
-		boolean isActivated = this.issuedAt != null && this.expiresIn != null
-				&& (this.issuedAt + this.expiresIn * 1000) > System.currentTimeMillis();
+		boolean isNotExpired = this.issuedAt != null && this.expiresIn != null
+				&& (this.issuedAt + this.expiresIn * 1000L) >= System.currentTimeMillis();
 
-		return !isAuthenticated || !isActivated;
+		return !isAuthenticated || !isNotExpired;
 	}
 }
