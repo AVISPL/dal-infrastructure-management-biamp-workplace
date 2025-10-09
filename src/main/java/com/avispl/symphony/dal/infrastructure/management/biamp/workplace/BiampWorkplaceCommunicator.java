@@ -120,6 +120,8 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private List<String> historicalProperties;
 	/** Indicates whether control properties are visible; defaults to false. */
 	private boolean configManagement;
+	/** The OAuth hostname used to obtain tokens. */
+	private String oauthHostname;
 
 	public BiampWorkplaceCommunicator() {
 		this.reentrantLock = new ReentrantLock();
@@ -139,6 +141,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.organizationIds = new ArrayList<>();
 		this.historicalProperties = new ArrayList<>();
 		this.configManagement = false;
+		this.oauthHostname = ApiConstant.OAUTH_HOSTNAME;
 	}
 
 	/**
@@ -216,6 +219,27 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.lastMonitoringCycleDuration = lastMonitoringCycleDuration;
 	}
 
+	/**
+	 * Retrieves {@link #oauthHostname}
+	 *
+	 * @return value of {@link #oauthHostname}
+	 */
+	public String getOauthHostname() {
+		return oauthHostname;
+	}
+
+	/**
+	 * Sets {@link #oauthHostname} value at adapter properties
+	 *
+	 * @param oauthHostname new value of {@link #oauthHostname}
+	 */
+	public void setOauthHostname(String oauthHostname) {
+		if (StringUtils.isNullOrEmpty(oauthHostname, true)) {
+			return;
+		}
+		this.oauthHostname = oauthHostname;
+	}
+
 	@Override
 	protected void internalInit() throws Exception {
 		this.logger.info(Constant.INITIAL_INTERNAL_INFO + this.getClass().getSimpleName());
@@ -238,7 +262,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	@Override
 	protected HttpHeaders putExtraRequestHeaders(HttpMethod httpMethod, String uri, HttpHeaders headers) throws Exception {
-		if (uri.equals(ApiConstant.GET_TOKEN_ENDPOINT)) {
+		if (uri.endsWith(ApiConstant.OAUTH_ENDPOINT)) {
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 		} else {
 			headers.setContentType(MediaType.APPLICATION_JSON);
@@ -403,8 +427,9 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 		if (this.authentication.isInvalid()) {
 			this.logger.info(Constant.REFRESHING_TOKENS_INFO);
+			final String authUrl = String.format("%s://%s/%s", this.getProtocol(), this.oauthHostname, ApiConstant.OAUTH_ENDPOINT);
 			AuthenticationReq authRequest = new AuthenticationReq(this.getLogin(), this.authentication.getRefreshToken());
-			Authentication authResponse = this.sendRequest(ApiConstant.GET_TOKEN_ENDPOINT, authRequest.toFormData(), ResponseType.AUTHENTICATION);
+			Authentication authResponse = this.sendRequest(authUrl, authRequest.toFormData(), ResponseType.AUTHENTICATION);
 			this.authentication = Optional.ofNullable(authResponse).orElse(new Authentication());
 			this.authentication.setIssuedAt(System.currentTimeMillis());
 		}

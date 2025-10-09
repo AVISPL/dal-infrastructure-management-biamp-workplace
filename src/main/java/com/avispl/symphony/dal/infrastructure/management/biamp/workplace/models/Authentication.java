@@ -3,6 +3,8 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace.models;
 
+import java.time.Duration;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -98,7 +100,7 @@ public class Authentication {
 	 * @param expiresIn new value of {@link #expiresIn}
 	 */
 	public void setExpiresIn(Long expiresIn) {
-		this.expiresIn = expiresIn;
+		this.expiresIn = expiresIn - Duration.ofMinutes(5).toMinutes();
 	}
 
 	/**

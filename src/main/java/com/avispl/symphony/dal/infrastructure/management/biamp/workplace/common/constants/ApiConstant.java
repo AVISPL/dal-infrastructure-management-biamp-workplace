@@ -15,7 +15,8 @@ public class ApiConstant {
 	}
 
 	//	Endpoints
-	public static final String GET_TOKEN_ENDPOINT = "https://iam.workplace.biamp.app/oauth/v2/token";
+	public static final String OAUTH_HOSTNAME = "iam.workplace.biamp.app";
+	public static final String OAUTH_ENDPOINT = "oauth/v2/token";
 	public static final String GRAPHQL_ENDPOINT = "graphql";
 
 	//	Fields

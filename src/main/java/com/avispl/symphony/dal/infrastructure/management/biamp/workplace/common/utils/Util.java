@@ -69,7 +69,7 @@ public class Util {
 			Thread.sleep(milliseconds);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			LOGGER.error(e.getMessage(), e);
+			LOGGER.error(String.format("Thread interrupted while delaying execution for %s ms.", milliseconds), e);
 		}
 	}
 

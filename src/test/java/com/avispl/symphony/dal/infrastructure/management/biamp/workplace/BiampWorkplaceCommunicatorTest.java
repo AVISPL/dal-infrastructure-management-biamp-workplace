@@ -3,11 +3,15 @@
  */
 package com.avispl.symphony.dal.infrastructure.management.biamp.workplace;
 
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.security.auth.login.FailedLoginException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,9 +21,12 @@ import com.avispl.symphony.api.dal.dto.control.AdvancedControllableProperty;
 import com.avispl.symphony.api.dal.dto.control.ControllableProperty;
 import com.avispl.symphony.api.dal.dto.monitor.ExtendedStatistics;
 import com.avispl.symphony.api.dal.dto.monitor.aggregator.AggregatedDevice;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.ApiConstant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.constants.Constant;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.common.utils.Util;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
+import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
+import com.avispl.symphony.dal.util.StringUtils;
 
 /**
  * Unit tests for the {@link BiampWorkplaceCommunicator} class.
@@ -49,32 +56,94 @@ class BiampWorkplaceCommunicatorTest {
 	}
 
 	@Test
-	void testGetMultipleStatistics() throws Exception {
-		this.communicator.setOrganizationIds("7d188efc-9a08-4bc9-9b61-431c823db38b");
+	void testConfigManagementProperty() throws Exception {
+		this.communicator.setConfigManagement(true);
+		this.communicator.getMultipleStatistics();
+		this.communicator.retrieveMultipleStatistics();
+		Util.delayExecution(Duration.ofSeconds(20).toMillis());
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
-		Util.delayExecution(10000);
-		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
-		Util.delayExecution(10000);
-		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
-		Util.delayExecution(10000);
 		Map<String, String> statistics = this.extendedStatistics.getStatistics();
-		List<AdvancedControllableProperty> controllableProperties = this.extendedStatistics.getControllableProperties();
 		Map<String, String> dynamicStatistics = this.extendedStatistics.getDynamicStatistics();
+		List<AggregatedDevice> aggregatedDevices = this.communicator.retrieveMultipleStatistics();
 
 		this.verifyStatistics(statistics);
-		this.verifyStatistics(dynamicStatistics);
-		controllableProperties.forEach(Assertions::assertNotNull);
+		Assertions.assertEquals(2, dynamicStatistics.size());
+		if (this.communicator.isConfigManagement()) {
+			aggregatedDevices.forEach(aggregatedDevice -> Assertions.assertFalse(aggregatedDevice.getControllableProperties().isEmpty()));
+		} else {
+			aggregatedDevices.forEach(aggregatedDevice -> Assertions.assertTrue(aggregatedDevice.getControllableProperties().isEmpty()));
+		}
+	}
+
+	@Test
+	void testHistoricalPropertiesProperty() throws Exception {
+		this.communicator.setHistoricalProperties(String.join(",", new String[] {
+				//	Optional graphs for aggregated devices
+				String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.TEMPERATURE.getName()),
+				String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.CPU_UTILIZATION.getName())
+		}));
+		this.communicator.getMultipleStatistics();
+		this.communicator.retrieveMultipleStatistics();
+		Util.delayExecution(Duration.ofSeconds(20).toMillis());
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		Map<String, String> statistics = this.extendedStatistics.getStatistics();
+		Map<String, String> dynamicStatistics = this.extendedStatistics.getDynamicStatistics();
+		List<AggregatedDevice> aggregatedDevices = this.communicator.retrieveMultipleStatistics();
+
+		this.verifyStatistics(statistics);
+		Assertions.assertEquals(2, dynamicStatistics.size());
+		aggregatedDevices.forEach(aggregatedDevice -> Assertions.assertEquals(2, aggregatedDevice.getDynamicStatistics().size()));
+	}
+
+	@Test
+	void testOauthHostnameProperty() throws Exception {
+		this.communicator.setOauthHostname("google.com");
+
+		if (StringUtils.isNotNullOrEmpty(this.communicator.getOauthHostname())
+				&& !this.communicator.getOauthHostname().equals(ApiConstant.OAUTH_HOSTNAME)) {
+			Assertions.assertThrows(FailedLoginException.class, () -> this.communicator.getMultipleStatistics());
+		} else {
+			this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+			Map<String, String> statistics = this.extendedStatistics.getStatistics();
+			Map<String, String> dynamicStatistics = this.extendedStatistics.getDynamicStatistics();
+
+			Assertions.assertEquals(ApiConstant.OAUTH_HOSTNAME, this.communicator.getOauthHostname());
+			this.verifyStatistics(statistics);
+			Assertions.assertEquals(2, dynamicStatistics.size());
+		}
+	}
+
+	@Test
+	void testOrganizationIdsProperty() throws Exception {
+		this.communicator.setOrganizationIds("7d188efc-9a08-4bc9-9b61-431c823db38b");
+		this.communicator.getMultipleStatistics();
+		this.communicator.retrieveMultipleStatistics();
+		Util.delayExecution(Duration.ofSeconds(20).toMillis());
+		Set<String> organizationIds = Arrays.stream(this.communicator.getOrganizationIds().split(","))
+				.map(String::trim).collect(Collectors.toSet());
+		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
+		Map<String, String> statistics = this.extendedStatistics.getStatistics();
+		Map<String, String> dynamicStatistics = this.extendedStatistics.getDynamicStatistics();
+		List<AggregatedDevice> aggregatedDevices = this.communicator.retrieveMultipleStatistics();
+
+		this.verifyStatistics(statistics);
+		Assertions.assertEquals(2, dynamicStatistics.size());
+		if (StringUtils.isNotNullOrEmpty(this.communicator.getOrganizationIds())) {
+			aggregatedDevices.forEach(aggregatedDevice -> {
+				String organizationId = aggregatedDevice.getProperties().get(OverviewProperty.ORGANIZATION_ID.getName());
+				Assertions.assertTrue(organizationIds.contains(organizationId));
+			});
+		}
 	}
 
 	@Test
 	void testRetrieveMultipleStatistics() throws Exception {
-		this.communicator.setHistoricalProperties("Status#Temperature(C), Status#CPUUtilization(%)");
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		this.communicator.retrieveMultipleStatistics();
-		Util.delayExecution(5000);
+		Util.delayExecution(Duration.ofSeconds(5).toMillis());
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		this.communicator.retrieveMultipleStatistics();
-		Util.delayExecution(5000);
+		Util.delayExecution(Duration.ofSeconds(5).toMillis());
 		this.extendedStatistics = (ExtendedStatistics) this.communicator.getMultipleStatistics().get(0);
 		List<AggregatedDevice> aggregatedDevices = this.communicator.retrieveMultipleStatistics();
 
@@ -85,7 +154,9 @@ class BiampWorkplaceCommunicatorTest {
 
 			this.verifyStatistics(statistics);
 			this.verifyStatistics(dynamicStatistics);
-			controllableProperties.forEach(Assertions::assertNotNull);
+			if (!controllableProperties.isEmpty()) {
+				controllableProperties.forEach(Assertions::assertNotNull);
+			}
 		});
 	}
 
@@ -106,6 +177,9 @@ class BiampWorkplaceCommunicatorTest {
 	private void verifyStatistics(Map<String, String> statistics) {
 		Map<String, Map<String, String>> groups = new LinkedHashMap<>();
 		groups.put("General", this.filterGroupStatistics(statistics, null));
+		groups.put(Constant.ORGANIZATION_GROUPS, this.filterGroupStatistics(statistics, Constant.ORGANIZATION_GROUPS));
+		groups.put(Constant.FIRMWARE_GROUP, this.filterGroupStatistics(statistics, Constant.FIRMWARE_GROUP));
+		groups.put(Constant.STATUS_GROUP, this.filterGroupStatistics(statistics, Constant.STATUS_GROUP));
 
 		for (Map<String, String> initGroup : groups.values()) {
 			for (Map.Entry<String, String> initStatistics : initGroup.entrySet()) {

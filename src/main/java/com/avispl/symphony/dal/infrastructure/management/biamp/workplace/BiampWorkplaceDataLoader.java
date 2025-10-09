@@ -27,7 +27,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.R
  */
 public class BiampWorkplaceDataLoader implements Runnable {
 	private static final long POLLING_CYCLE_INTERVAL = Duration.ofMinutes(1).toMillis();
-	private static final long RETRIEVE_STATISTICS_TIMEOUT = Duration.ofMinutes(3).toMillis();
+	private static final long RETRIEVE_STATISTICS_TIMEOUT = Duration.ofMinutes(5).toMillis();
 
 	private final Log logger = LogFactory.getLog(this.getClass());
 	private final BiampWorkplaceCommunicator communicator;
@@ -36,7 +36,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 	private volatile boolean inProgress;
 	private volatile boolean devicePaused;
 	private volatile long validRetrieveStatisticsTimestamp;
-	private volatile boolean flag;
+	private volatile boolean cycleExecuted;
 	private volatile long nextCollectionTime;
 
 	public BiampWorkplaceDataLoader(BiampWorkplaceCommunicator communicator, List<Device> devices) {
@@ -46,7 +46,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 		this.inProgress = true;
 		this.devicePaused = true;
 		this.nextCollectionTime = System.currentTimeMillis();
-		this.flag = false;
+		this.cycleExecuted = false;
 	}
 
 	/**
@@ -74,9 +74,9 @@ public class BiampWorkplaceDataLoader implements Runnable {
 			}
 
 			long currentTimestamp = System.currentTimeMillis();
-			if (!this.flag && this.nextCollectionTime < currentTimestamp) {
+			if (!this.cycleExecuted && this.nextCollectionTime < currentTimestamp) {
 				this.collectAggregatedDeviceData();
-				this.flag = true;
+				this.cycleExecuted = true;
 			}
 
 			if (!this.inProgress) {
@@ -86,32 +86,26 @@ public class BiampWorkplaceDataLoader implements Runnable {
 			while (this.nextCollectionTime > System.currentTimeMillis()) {
 				Util.delayExecution(1000);
 			}
-			if (this.flag) {
+			if (this.cycleExecuted) {
 				this.nextCollectionTime = System.currentTimeMillis() + POLLING_CYCLE_INTERVAL;
 				this.communicator.setLastMonitoringCycleDuration(System.currentTimeMillis() - startCycle);
-				this.flag = false;
+				this.cycleExecuted = false;
 			}
 		}
 	}
 
-	/**
-	 * Stops the data collection process.
-	 */
+	/** Stops the data collection process. */
 	public void stop() {
 		this.inProgress = false;
 	}
 
-	/**
-	 * Updates the {@code validRetrieveStatisticsTimestamp}.
-	 */
+	/** Marks the device as paused for {@link #RETRIEVE_STATISTICS_TIMEOUT} from now. */
 	public synchronized void updateValidRetrieveStatisticsTimestamp() {
 		this.validRetrieveStatisticsTimestamp = System.currentTimeMillis() + RETRIEVE_STATISTICS_TIMEOUT;
 		this.updateAggregatorStatus();
 	}
 
-	/**
-	 * Collects and updates settings data for all registered devices.
-	 */
+	/** Collects and updates settings data for all registered devices. */
 	private void collectAggregatedDeviceData() {
 		synchronized (this.devices) {
 			for (Device device : this.devices) {
@@ -127,10 +121,8 @@ public class BiampWorkplaceDataLoader implements Runnable {
 		}
 	}
 
-	/**
-	 * Updates the aggregator status based on the current timestamp.
-	 */
+	/** Updates the aggregator status based on the current timestamp. */
 	private synchronized void updateAggregatorStatus() {
-		this.devicePaused = this.validRetrieveStatisticsTimestamp > 0L && this.validRetrieveStatisticsTimestamp < System.currentTimeMillis();
+		this.devicePaused = this.validRetrieveStatisticsTimestamp < System.currentTimeMillis();
 	}
 }
