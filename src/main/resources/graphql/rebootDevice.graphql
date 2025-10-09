@@ -1,0 +1,12 @@
+mutation RebootDevice($orgId: ID!, $deviceId: ID!) {
+  deviceCommand(input: {
+    orgId: $orgId
+    deviceId: $deviceId
+    arguments: []
+    command: "reboot"
+    service: "common"
+  }) {
+    success
+    errorMessage
+  }
+}
