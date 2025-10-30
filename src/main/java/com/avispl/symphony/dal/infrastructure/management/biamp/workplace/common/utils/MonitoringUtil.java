@@ -447,7 +447,6 @@ public class MonitoringUtil {
 
 	/**
 	 * Converts a duration in milliseconds to seconds.
-	 * If >= 1000ms, returns integer seconds; otherwise, returns a decimal with 2 digits.
 	 *
 	 * @param value duration in milliseconds as string
 	 * @return duration in seconds as string, or {@link Constant#NOT_AVAILABLE} if input is null or empty
@@ -457,8 +456,6 @@ public class MonitoringUtil {
 			return Constant.NOT_AVAILABLE;
 		}
 		long duration = Long.parseLong(value);
-		return duration == 0 || duration >= 1000
-				? String.valueOf((int) (duration / 1000))
-				: String.format("%.2f", Math.round(duration / 1000.0 * 100) / 100.0);
+		return String.valueOf(Math.round(duration / 1000.0));
 	}
 }
