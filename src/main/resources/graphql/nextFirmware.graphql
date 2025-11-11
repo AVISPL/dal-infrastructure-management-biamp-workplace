@@ -1,0 +1,10 @@
+query getANextFirmware(
+  $deviceId: ID!, $fwrev: String, $pubkey: String
+) {
+  device(id: $deviceId) {
+    nextFirmware(hwrev: null, fwrev: $fwrev, serial: null, pubkey: $pubkey) {
+      id
+      version
+    }
+  }
+}

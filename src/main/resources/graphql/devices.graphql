@@ -1,0 +1,61 @@
+query AllDevices($limit: Int, $offset: Int, $order: [DeviceOrder!], $filter: DeviceFilter) {
+  allDevices(limit: $limit, offset: $offset, order: $order, filter: $filter) {
+    totalCount
+    devices {
+      id
+      orgId
+      orgName
+      serial
+      state
+      type {
+        id
+        name
+      }
+      desk {
+        id
+        name
+      }
+      room {
+        id
+        name
+      }
+      attributes {
+        description
+        productModel
+        supportedCommands {
+          command
+          service
+        }
+      }
+      channel {
+        id
+        name
+      }
+      assignedFirmware {
+        id
+        version
+      }
+      latestFirmware {
+        id
+        version
+      }
+      firmwarePublicKey
+      placeId
+      place {
+        id
+        hierarchy {
+          id
+          name
+        }
+      }
+      status {
+        timestamp
+        temperature
+        firmware
+        uptime
+        presence
+        cpuUtilization
+      }
+    }
+  }
+}
