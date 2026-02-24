@@ -31,6 +31,15 @@ public class Constant {
 	public static final String FIRMWARE_GROUP = "Firmware";
 	public static final String STATUS_GROUP = "Status";
 
+	// Metadata properties
+	public static final String ADAPTER_BUILD_DATE = "AdapterBuildDate";
+	public static final String ADAPTER_UPTIME = "AdapterUptime";
+	public static final String ADAPTER_UPTIME_MIN = "AdapterUptime(min)";
+	public static final String ADAPTER_VERSION = "AdapterVersion";
+	public static final String LAST_MONITORING_CYCLE_DURATION = "LastMonitoringCycleDuration(sec)";
+	public static final String MONITORING_CYCLE_INTERVAL = "MonitoringCycleInterval(min)";
+	public static final String MONITORED_DEVICES_TOTAL = "MonitoredDevicesTotal";
+
 	//	Values
 	public static final String NOT_AVAILABLE = "N/A";
 	public static final String REFRESH_TOKEN_INVALID_MESSAGE = "Errors.OIDCSession.RefreshTokenInvalid";
