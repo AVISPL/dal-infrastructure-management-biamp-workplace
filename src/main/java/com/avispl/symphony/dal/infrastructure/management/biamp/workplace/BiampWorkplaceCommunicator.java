@@ -328,8 +328,13 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			aggregatedDevices.removeIf(aggregatedDevice -> !this.organizationIds.contains(aggregatedDevice.getProperties().get(organizationName)));
 		}
 		this.localAggregatedDevices = aggregatedDevices;
-		this.versionProperties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), String.valueOf(this.lastMonitoringCycleDuration));
+		this.versionProperties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), String.valueOf(Math.max(this.lastMonitoringCycleDuration, 1L)));
 		this.versionProperties.setProperty(GeneralProperty.MONITORED_DEVICES_TOTAL.getProperty(), String.valueOf(this.localAggregatedDevices.size()));
+		try {
+			this.versionProperties.setProperty(GeneralProperty.MONITORING_CYCLE_INTERVAL.getProperty(), String.valueOf(getMonitoringRate()));
+		} catch (NoSuchMethodError nsme) {
+			logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+		}
 		return this.localAggregatedDevices;
 	}
 
@@ -475,7 +480,12 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private void setupDataLoader() {
 		if (this.executorService == null) {
 			this.executorService = Executors.newFixedThreadPool(1);
-			this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices);
+			try {
+				this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices, getMonitoringRate());
+			} catch (NoSuchMethodError nsme) {
+				this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices, 1);
+				logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+			}
 			this.executorService.submit(this.dataLoader);
 		}
 		this.dataLoader.setNextCollectionTime(System.currentTimeMillis());

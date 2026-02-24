@@ -26,7 +26,7 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.R
  * @since 1.0.0
  */
 public class BiampWorkplaceDataLoader implements Runnable {
-	private static final long POLLING_CYCLE_INTERVAL = Duration.ofMinutes(1).toMillis();
+	private final int monitoringRate;
 	private static final long RETRIEVE_STATISTICS_TIMEOUT = Duration.ofMinutes(5).toMillis();
 
 	private final Log logger = LogFactory.getLog(this.getClass());
@@ -39,7 +39,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 	private volatile boolean cycleExecuted;
 	private volatile long nextCollectionTime;
 
-	public BiampWorkplaceDataLoader(BiampWorkplaceCommunicator communicator, List<Device> devices) {
+	public BiampWorkplaceDataLoader(BiampWorkplaceCommunicator communicator, List<Device> devices, int monitoringRate) {
 		this.communicator = communicator;
 		this.devices = devices;
 
@@ -47,6 +47,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 		this.devicePaused = true;
 		this.nextCollectionTime = System.currentTimeMillis();
 		this.cycleExecuted = false;
+		this.monitoringRate = monitoringRate;
 	}
 
 	/**
@@ -87,7 +88,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 				Util.delayExecution(1000);
 			}
 			if (this.cycleExecuted) {
-				this.nextCollectionTime = System.currentTimeMillis() + POLLING_CYCLE_INTERVAL;
+				this.nextCollectionTime = System.currentTimeMillis() + (monitoringRate * 60000L);
 				this.communicator.setLastMonitoringCycleDuration(System.currentTimeMillis() - startCycle);
 				this.cycleExecuted = false;
 			}
