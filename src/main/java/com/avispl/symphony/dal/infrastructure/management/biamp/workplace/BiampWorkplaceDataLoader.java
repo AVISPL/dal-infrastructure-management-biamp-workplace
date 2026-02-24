@@ -84,12 +84,12 @@ public class BiampWorkplaceDataLoader implements Runnable {
 				this.logger.debug("Main data collection thread is not in progress, breaking.");
 				break;
 			}
+			this.communicator.setLastMonitoringCycleDuration(System.currentTimeMillis() - startCycle);
 			while (this.nextCollectionTime > System.currentTimeMillis()) {
 				Util.delayExecution(1000);
 			}
 			if (this.cycleExecuted) {
 				this.nextCollectionTime = System.currentTimeMillis() + (monitoringRate * 60000L);
-				this.communicator.setLastMonitoringCycleDuration(System.currentTimeMillis() - startCycle);
 				this.cycleExecuted = false;
 			}
 		}
