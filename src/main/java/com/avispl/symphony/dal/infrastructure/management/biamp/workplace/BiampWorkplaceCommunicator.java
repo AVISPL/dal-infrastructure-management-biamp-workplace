@@ -331,7 +331,7 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.versionProperties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), String.valueOf(Math.max(this.lastMonitoringCycleDuration, 1L)));
 		this.versionProperties.setProperty(GeneralProperty.MONITORED_DEVICES_TOTAL.getProperty(), String.valueOf(this.localAggregatedDevices.size()));
 		try {
-			this.versionProperties.setProperty(GeneralProperty.MONITORING_CYCLE_INTERVAL.getProperty(), String.valueOf(getMonitoringRate()));
+			this.versionProperties.setProperty("MonitoringCycleInterval(min)", String.valueOf(getMonitoringRate()));
 		} catch (NoSuchMethodError nsme) {
 			logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
 		}
