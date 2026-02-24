@@ -346,43 +346,4 @@ public class MonitoringUtil {
 
 		return Character.toUpperCase(value.charAt(0)) + value.substring(1);
 	}
-
-	/**
-	 * Returns the elapsed uptime in **whole minutes** between the current system time and the given timestamp in milliseconds.
-	 * <p>
-	 * The input timestamp represents the start time in milliseconds (typically from {@link System#currentTimeMillis()}).
-	 * The returned string is the total number of minutes that have elapsed, excluding seconds.
-	 *
-	 * @param uptime the start time in milliseconds as a string (e.g., "1717581000000")
-	 * @return a string representing the total number of elapsed minutes (e.g., "125"), or null if parsing fails
-	 */
-	private static String mapToUptimeMin(String uptime) {
-		try {
-			if (StringUtils.isNullOrEmpty(uptime)) {
-				return null;
-			}
-
-			long uptimeSecond = (System.currentTimeMillis() - Long.parseLong(uptime)) / 1000;
-			long minutes = uptimeSecond / 60;
-
-			return String.valueOf(minutes);
-		} catch (Exception e) {
-			LOGGER.error(Constant.MAP_TO_UPTIME_MIN_FAILED + uptime, e);
-			return null;
-		}
-	}
-
-	/**
-	 * Converts a duration in milliseconds to seconds.
-	 *
-	 * @param value duration in milliseconds as string
-	 * @return duration in seconds as string, or {@link Constant#NOT_AVAILABLE} if input is null or empty
-	 */
-	private static String mapToMonitoringCycleDuration(String value) {
-		if (StringUtils.isNullOrEmpty(value)) {
-			return Constant.NOT_AVAILABLE;
-		}
-		long duration = Long.parseLong(value);
-		return String.valueOf(Math.round(duration / 1000.0));
-	}
 }
