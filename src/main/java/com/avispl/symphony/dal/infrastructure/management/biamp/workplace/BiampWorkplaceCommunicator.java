@@ -483,10 +483,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private void retrieveGeneralProperties(Map<String, String> properties, Map<String, String> dynamicProperties) {
 		long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
 
-		properties.put(Constant.ADAPTER_BUILD_DATE, properties.get("adapter.build.date"));
+		properties.put(Constant.ADAPTER_BUILD_DATE, String.valueOf(versionProperties.get("adapter.build.date")));
 		properties.put(Constant.ADAPTER_UPTIME, normalizeUptime(adapterUptime/1000));
 		properties.put(Constant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000*60)));
-		properties.put(Constant.ADAPTER_VERSION, properties.get("adapter.version"));
+		properties.put(Constant.ADAPTER_VERSION, (String) versionProperties.get("adapter.version"));
 		properties.put(Constant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
 		dynamicProperties.put(Constant.MONITORED_DEVICES_TOTAL, String.valueOf(localAggregatedDevices.size()));
 		try {
