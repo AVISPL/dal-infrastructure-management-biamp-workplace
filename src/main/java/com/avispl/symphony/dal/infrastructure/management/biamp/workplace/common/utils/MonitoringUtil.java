@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,7 +33,6 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.D
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.UserProfileProperty;
 import com.avispl.symphony.dal.util.StringUtils;
@@ -74,37 +72,6 @@ public class MonitoringUtil {
 				property -> Objects.isNull(groupName) ? property.getName() : String.format(Constant.PROPERTY_FORMAT, groupName, property.getName()),
 				property -> Optional.ofNullable(mapper.apply(property)).orElse(Constant.NOT_AVAILABLE)
 		));
-	}
-
-	/**
-	 * Maps a general aggregator property to its string representation.
-	 * <p>Handles various value types. Returns {@link Constant#NOT_AVAILABLE} if the property is null or unsupported.</p>
-	 *
-	 * @param versionProperties the {@link Properties} object containing version-related data
-	 * @param property the {@link GeneralProperty} to map
-	 * @return the string representation of the property, or {@link Constant#NOT_AVAILABLE} if unavailable
-	 */
-	public static String mapToGeneralProperty(Properties versionProperties, GeneralProperty property) {
-		if (property == null) {
-			LOGGER.warn(String.format(Constant.OBJECT_NULL_WARNING, "VersionProperties"));
-			return null;
-		}
-
-		switch (property) {
-			case ADAPTER_BUILD_DATE:
-			case ADAPTER_VERSION:
-			case MONITORED_DEVICES_TOTAL:
-				return mapToValue(versionProperties.getProperty(property.getProperty()));
-			case ADAPTER_UPTIME:
-				return mapToUptime(versionProperties.getProperty(property.getProperty()));
-			case ADAPTER_UPTIME_MIN:
-				return mapToUptimeMin(versionProperties.getProperty(property.getProperty()));
-			case LAST_MONITORING_CYCLE_DURATION:
-				return mapToMonitoringCycleDuration(versionProperties.getProperty(property.getProperty()));
-			default:
-				LOGGER.warn(String.format(Constant.UNSUPPORTED_PROPERTY_WARNING, "mapToGeneralProperty()", property));
-				return null;
-		}
 	}
 
 	/**
@@ -378,84 +345,5 @@ public class MonitoringUtil {
 		}
 
 		return Character.toUpperCase(value.charAt(0)) + value.substring(1);
-	}
-
-	/**
-	 * Returns the elapsed uptime between the current system time and the given timestamp in milliseconds.
-	 * <p>
-	 * The input timestamp represents the start time in milliseconds (typically from {@link System#currentTimeMillis()}).
-	 * The returned string represents the absolute duration in the format:
-	 * "X day(s) Y hour(s) Z minute(s) W second(s)", omitting any zero-value units except seconds.
-	 *
-	 * @param uptime the start time in milliseconds as a string (e.g., "1717581000000")
-	 * @return a formatted duration string like "2 day(s) 3 hour(s) 15 minute(s) 42 second(s)", or null if parsing fails
-	 */
-	private static String mapToUptime(String uptime) {
-		try {
-			if (StringUtils.isNullOrEmpty(uptime)) {
-				return null;
-			}
-
-			long uptimeSecond = (System.currentTimeMillis() - Long.parseLong(uptime)) / 1000;
-			long seconds = uptimeSecond % 60;
-			long minutes = uptimeSecond % 3600 / 60;
-			long hours = uptimeSecond % 86400 / 3600;
-			long days = uptimeSecond / 86400;
-			StringBuilder rs = new StringBuilder();
-			if (days > 0) {
-				rs.append(days).append(" day(s) ");
-			}
-			if (hours > 0) {
-				rs.append(hours).append(" hour(s) ");
-			}
-			if (minutes > 0) {
-				rs.append(minutes).append(" minute(s) ");
-			}
-			rs.append(seconds).append(" second(s)");
-
-			return rs.toString().trim();
-		} catch (Exception e) {
-			LOGGER.error(Constant.MAP_TO_UPTIME_FAILED + uptime, e);
-			return null;
-		}
-	}
-
-	/**
-	 * Returns the elapsed uptime in **whole minutes** between the current system time and the given timestamp in milliseconds.
-	 * <p>
-	 * The input timestamp represents the start time in milliseconds (typically from {@link System#currentTimeMillis()}).
-	 * The returned string is the total number of minutes that have elapsed, excluding seconds.
-	 *
-	 * @param uptime the start time in milliseconds as a string (e.g., "1717581000000")
-	 * @return a string representing the total number of elapsed minutes (e.g., "125"), or null if parsing fails
-	 */
-	private static String mapToUptimeMin(String uptime) {
-		try {
-			if (StringUtils.isNullOrEmpty(uptime)) {
-				return null;
-			}
-
-			long uptimeSecond = (System.currentTimeMillis() - Long.parseLong(uptime)) / 1000;
-			long minutes = uptimeSecond / 60;
-
-			return String.valueOf(minutes);
-		} catch (Exception e) {
-			LOGGER.error(Constant.MAP_TO_UPTIME_MIN_FAILED + uptime, e);
-			return null;
-		}
-	}
-
-	/**
-	 * Converts a duration in milliseconds to seconds.
-	 *
-	 * @param value duration in milliseconds as string
-	 * @return duration in seconds as string, or {@link Constant#NOT_AVAILABLE} if input is null or empty
-	 */
-	private static String mapToMonitoringCycleDuration(String value) {
-		if (StringUtils.isNullOrEmpty(value)) {
-			return Constant.NOT_AVAILABLE;
-		}
-		long duration = Long.parseLong(value);
-		return String.valueOf(Math.round(duration / 1000.0));
 	}
 }

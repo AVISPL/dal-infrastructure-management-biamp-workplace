@@ -57,7 +57,6 @@ import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.R
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.FirmwareProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.OverviewProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregated.StatusProperty;
-import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.GeneralProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.OrganizationProperty;
 import com.avispl.symphony.dal.infrastructure.management.biamp.workplace.types.aggregator.UserProfileProperty;
 import com.avispl.symphony.dal.util.ControllablePropertyFactory;
@@ -71,11 +70,6 @@ import com.avispl.symphony.dal.util.StringUtils;
  * @since 1.0.0
  */
 public class BiampWorkplaceCommunicator extends RestCommunicator implements Monitorable, Controller, Aggregator {
-	/** Default graph properties used for the aggregator. */
-	private static final Set<String> DEFAULT_GRAPH_PROPERTIES = new HashSet<>(Arrays.asList(
-			GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getName(),
-			GeneralProperty.MONITORED_DEVICES_TOTAL.getName()
-	));
 	/** Historical properties of aggregated devices for graphing. */
 	private static final Set<String> AGGREGATED_HISTORICAL_PROPERTIES = new HashSet<>(Arrays.asList(
 			String.format(Constant.PROPERTY_FORMAT, Constant.STATUS_GROUP, StatusProperty.TEMPERATURE.getName()),
@@ -129,7 +123,6 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		this.objectMapper = new ObjectMapper();
 		this.requestStateHandler = new RequestStateHandler();
 
-		this.adapterInitializationTimestamp = System.currentTimeMillis();
 		this.lastMonitoringCycleDuration = 0L;
 		this.localExtendedStatistics = new ExtendedStatistics();
 		this.localAggregatedDevices = new ArrayList<>();
@@ -243,9 +236,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	@Override
 	protected void internalInit() throws Exception {
 		this.logger.info(Constant.INITIAL_INTERNAL_INFO + this.getClass().getSimpleName());
+		this.adapterInitializationTimestamp = System.currentTimeMillis();
 		this.setTrustAllCertificates(true);
 		this.setAuthenticationScheme(AuthenticationScheme.None);
-		this.loadProperties(this.versionProperties);
+		this.loadProperties();
 		this.authenticate();
 		super.internalInit();
 	}
@@ -279,12 +273,14 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			this.setupData();
 			ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 			Map<String, String> statistics = new HashMap<>();
-			statistics.putAll(this.getGeneralProperties());
+			Map<String, String> dynamicStatistics = new HashMap<>();
+
+			retrieveGeneralProperties(statistics, dynamicStatistics);
 			statistics.putAll(this.getOrganizationProperties());
 			statistics.putAll(this.getProfileProperties());
 
 			extendedStatistics.setStatistics(statistics);
-			extendedStatistics.setDynamicStatistics(this.getDynamicStatistics(statistics));
+			extendedStatistics.setDynamicStatistics(dynamicStatistics);
 			this.localExtendedStatistics = extendedStatistics;
 		} finally {
 			this.reentrantLock.unlock();
@@ -328,8 +324,6 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			aggregatedDevices.removeIf(aggregatedDevice -> !this.organizationIds.contains(aggregatedDevice.getProperties().get(organizationName)));
 		}
 		this.localAggregatedDevices = aggregatedDevices;
-		this.versionProperties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), String.valueOf(this.lastMonitoringCycleDuration));
-		this.versionProperties.setProperty(GeneralProperty.MONITORED_DEVICES_TOTAL.getProperty(), String.valueOf(this.localAggregatedDevices.size()));
 		return this.localAggregatedDevices;
 	}
 
@@ -407,14 +401,10 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	 * Loads version properties and sets initial values used to create general properties
 	 * for the aggregator device.
 	 *
-	 * @param properties the properties to load and update
 	 */
-	private void loadProperties(Properties properties) {
+	private void loadProperties() {
 		try {
-			properties.load(this.getClass().getResourceAsStream("/version.properties"));
-			properties.setProperty(GeneralProperty.ADAPTER_UPTIME.getProperty(), String.valueOf(this.adapterInitializationTimestamp));
-			properties.setProperty(GeneralProperty.LAST_MONITORING_CYCLE_DURATION.getProperty(), "0");
-			properties.setProperty(GeneralProperty.MONITORED_DEVICES_TOTAL.getProperty(), "0");
+			versionProperties.load(this.getClass().getResourceAsStream("/version.properties"));
 		} catch (IOException e) {
 			this.logger.error(Constant.READ_PROPERTIES_FILE_FAILED, e);
 		}
@@ -475,7 +465,12 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 	private void setupDataLoader() {
 		if (this.executorService == null) {
 			this.executorService = Executors.newFixedThreadPool(1);
-			this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices);
+			try {
+				this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices, getMonitoringRate());
+			} catch (NoSuchMethodError nsme) {
+				this.dataLoader = new BiampWorkplaceDataLoader(this, this.devices, 1);
+				logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+			}
 			this.executorService.submit(this.dataLoader);
 		}
 		this.dataLoader.setNextCollectionTime(System.currentTimeMillis());
@@ -484,16 +479,21 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 
 	/**
 	 * Retrieves general properties related to the adapter's version and status.
-	 * <p>Uses {@link MonitoringUtil#mapToGeneralProperty(Properties, GeneralProperty)} to map each property.</p>
-	 *
-	 * @return a map of general property names and their corresponding values
 	 */
-	private Map<String, String> getGeneralProperties() {
-		return MonitoringUtil.generateProperties(
-				GeneralProperty.values(),
-				null,
-				property -> MonitoringUtil.mapToGeneralProperty(this.versionProperties, property)
-		);
+	private void retrieveGeneralProperties(Map<String, String> properties, Map<String, String> dynamicProperties) {
+		long adapterUptime = System.currentTimeMillis() - adapterInitializationTimestamp;
+
+		properties.put(Constant.ADAPTER_BUILD_DATE, String.valueOf(versionProperties.get("adapter.build.date")));
+		properties.put(Constant.ADAPTER_UPTIME, normalizeUptime(adapterUptime/1000));
+		properties.put(Constant.ADAPTER_UPTIME_MIN, String.valueOf(adapterUptime / (1000*60)));
+		properties.put(Constant.ADAPTER_VERSION, (String) versionProperties.get("adapter.version"));
+		properties.put(Constant.LAST_MONITORING_CYCLE_DURATION, String.valueOf(lastMonitoringCycleDuration));
+		dynamicProperties.put(Constant.MONITORED_DEVICES_TOTAL, String.valueOf(localAggregatedDevices.size()));
+		try {
+			properties.put(Constant.MONITORING_CYCLE_INTERVAL, String.valueOf(getMonitoringRate()));
+		} catch (NoSuchMethodError nsme) {
+			logger.warn("Unsupported feature: getMonitoringRate isn't available on current Cloud Connector version.", nsme);
+		}
 	}
 
 	/**
@@ -535,33 +535,6 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 		}
 
 		return properties;
-	}
-
-	/**
-	 * Returns dynamic statistics for the aggregator.
-	 * <p>
-	 * If the input map is empty, logs a warning and returns an empty map.
-	 * Otherwise, builds a map of {@code DEFAULT_GRAPHS} with values from
-	 * {@code statistics}, or {@link Constant#NOT_AVAILABLE} if missing.
-	 * </p>
-	 *
-	 * @param statistics the input statistics
-	 * @return a map of default graphs and their values, or an empty map if none
-	 */
-	private Map<String, String> getDynamicStatistics(Map<String, String> statistics) {
-		if (MapUtils.isEmpty(statistics)) {
-			this.logger.warn(Constant.STATISTICS_EMPTY_WARNING);
-			return Collections.emptyMap();
-		}
-
-		Map<String, String> dynamicStatistic = new HashMap<>();
-		DEFAULT_GRAPH_PROPERTIES.forEach(defaultGraph -> {
-			String statisticValue = Optional.ofNullable(statistics.get(defaultGraph)).orElse(Constant.NOT_AVAILABLE);
-
-			dynamicStatistic.put(defaultGraph, statisticValue);
-		});
-
-		return dynamicStatistic;
 	}
 
 	/**
@@ -703,5 +676,36 @@ public class BiampWorkplaceCommunicator extends RestCommunicator implements Moni
 			this.logger.error(String.format(Constant.FETCH_DATA_FAILED, endpoint, responseClassName), e);
 			return null;
 		}
+	}
+
+	/**
+	 * Uptime is received in seconds, need to normalize it and make it human-readable, like 1 d 5 hr 12 min 55 sec
+	 * Incoming parameter is may have a decimal point, so in order to safely process this - it's rounded first.
+	 * We don't need to add a segment of time if it's 0.
+	 *
+	 * @param uptimeSeconds value in seconds
+	 * @return string value of format 'x d x hr x min x sec'
+	 */
+	private String normalizeUptime(long uptimeSeconds) {
+		StringBuilder normalizedUptime = new StringBuilder();
+
+		long seconds = uptimeSeconds % 60;
+		long minutes = uptimeSeconds % 3600 / 60;
+		long hours = uptimeSeconds % 86400 / 3600;
+		long days = uptimeSeconds / 86400;
+
+		if (days > 0) {
+			normalizedUptime.append(days).append(" d ");
+		}
+		if (hours > 0) {
+			normalizedUptime.append(hours).append(" hr ");
+		}
+		if (minutes > 0) {
+			normalizedUptime.append(minutes).append(" min ");
+		}
+		if (seconds > 0 || normalizedUptime.length() == 0) {
+			normalizedUptime.append(seconds).append(" sec");
+		}
+		return normalizedUptime.toString().trim();
 	}
 }
