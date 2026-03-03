@@ -62,7 +62,6 @@ public class BiampWorkplaceDataLoader implements Runnable {
 	@Override
 	public void run() {
 		while (this.inProgress) {
-			long startCycle = System.currentTimeMillis();
 			Util.delayExecution(500);
 			if (!this.inProgress) {
 				this.logger.debug("Main data collection thread is not in progress, breaking.");
@@ -84,7 +83,7 @@ public class BiampWorkplaceDataLoader implements Runnable {
 				this.logger.debug("Main data collection thread is not in progress, breaking.");
 				break;
 			}
-			this.communicator.setLastMonitoringCycleDuration(System.currentTimeMillis() - startCycle);
+			this.communicator.setLastMonitoringCycleDuration(Math.max(System.currentTimeMillis() - currentTimestamp, 1L));
 			while (this.nextCollectionTime > System.currentTimeMillis()) {
 				Util.delayExecution(1000);
 			}
